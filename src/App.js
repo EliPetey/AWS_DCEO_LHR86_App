@@ -1,11 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Authenticator } from '@aws-amplify/ui-react';
 import '@aws-amplify/ui-react/styles.css';
 import ChatInterface from './components/ChatInterface';
+import KnowledgeContribution from './components/KnowledgeContribution';
 import './styles/App.css';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentView, setCurrentView] = useState('chat');
+
+  const renderCurrentView = (user) => {
+    switch(currentView) {
+      case 'chat':
+        return <ChatInterface user={user} />;
+      case 'contribute':
+        return <KnowledgeContribution />;
+      default:
+        return <ChatInterface user={user} />;
+    }
+  };
 
   return (
     <div className="App">
@@ -19,11 +31,26 @@ function App() {
           <main className="app-main">
             <div className="user-info">
               <span>Welcome, {user?.username || 'Engineer'}!</span>
-              <button onClick={signOut} className="sign-out-btn">
-                Sign Out
-              </button>
+              <div className="nav-buttons">
+                <button 
+                  className={`nav-btn ${currentView === 'chat' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('chat')}
+                >
+                  💬 Chat
+                </button>
+                <button 
+                  className={`nav-btn ${currentView === 'contribute' ? 'active' : ''}`}
+                  onClick={() => setCurrentView('contribute')}
+                >
+                  🧠 Contribute
+                </button>
+                <button onClick={signOut} className="sign-out-btn">
+                  Sign Out
+                </button>
+              </div>
             </div>
-            <ChatInterface user={user} />
+            
+            {renderCurrentView(user)}
           </main>
         )}
       </Authenticator>
