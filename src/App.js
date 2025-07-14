@@ -1,22 +1,40 @@
 import React, { useState } from 'react';
-import { Authenticator } from '@aws-amplify/ui-react';
-import '@aws-amplify/ui-react/styles.css';
-import ChatInterface from './components/ChatInterface';
-import KnowledgeContribution from './components/KnowledgeContribution';
-import './styles/App.css';
+import './App.css';
 
 function App() {
-  const [currentView, setCurrentView] = useState('chat');
-
-  const renderCurrentView = (user) => {
-    switch(currentView) {
-      case 'chat':
-        return <ChatInterface user={user} />;
-      case 'contribute':
-        return <KnowledgeContribution />;
-      default:
-        return <ChatInterface user={user} />;
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      text: "Hello! I'm your AI Engineering Assistant. How can I help you today?",
+      sender: 'bot',
+      timestamp: new Date()
     }
+  ]);
+  const [inputText, setInputText] = useState('');
+
+  const handleSendMessage = () => {
+    if (!inputText.trim()) return;
+
+    const userMessage = {
+      id: Date.now(),
+      text: inputText,
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputText('');
+
+    // Simple bot response
+    setTimeout(() => {
+      const botResponse = {
+        id: Date.now() + 1,
+        text: `I received your message: "${inputText}". This is a basic response. Full AI integration coming soon!`,
+        sender: 'bot',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, botResponse]);
+    }, 1000);
   };
 
   return (
@@ -26,34 +44,36 @@ function App() {
         <p>Document Processing & Technical Q&A</p>
       </header>
 
-      <Authenticator>
-        {({ signOut, user }) => (
-          <main className="app-main">
-            <div className="user-info">
-              <span>Welcome, {user?.username || 'Engineer'}!</span>
-              <div className="nav-buttons">
-                <button 
-                  className={`nav-btn ${currentView === 'chat' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('chat')}
-                >
-                  💬 Chat
-                </button>
-                <button 
-                  className={`nav-btn ${currentView === 'contribute' ? 'active' : ''}`}
-                  onClick={() => setCurrentView('contribute')}
-                >
-                  🧠 Contribute
-                </button>
-                <button onClick={signOut} className="sign-out-btn">
-                  Sign Out
-                </button>
+      <main className="app-main">
+        <div className="chat-container">
+          <div className="messages">
+            {messages.map((message) => (
+              <div key={message.id} className={`message ${message.sender}`}>
+                <div className="message-content">
+                  {message.text}
+                </div>
+                <div className="message-time">
+                  {message.timestamp.toLocaleTimeString()}
+                </div>
               </div>
-            </div>
-            
-            {renderCurrentView(user)}
-          </main>
-        )}
-      </Authenticator>
+            ))}
+          </div>
+
+          <div className="input-container">
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              placeholder="Ask me anything about engineering..."
+              className="message-input"
+            />
+            <button onClick={handleSendMessage} className="send-button">
+              Send
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
