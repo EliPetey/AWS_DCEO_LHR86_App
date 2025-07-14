@@ -2,76 +2,46 @@ import React, { useState } from 'react';
 import './App.css';
 
 function App() {
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      text: "Hello! I'm your AI Engineering Assistant. How can I help you today?",
-      sender: 'bot',
-      timestamp: new Date()
-    }
+  const [message, setMessage] = useState('');
+  const [chat, setChat] = useState([
+    { id: 1, text: 'Welcome to AI Engineering Assistant! How can I help you?', sender: 'bot' }
   ]);
-  const [inputText, setInputText] = useState('');
 
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
-
-    const userMessage = {
-      id: Date.now(),
-      text: inputText,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
-
-    // Simple bot response
-    setTimeout(() => {
-      const botResponse = {
-        id: Date.now() + 1,
-        text: `I received your message: "${inputText}". This is a basic response. Full AI integration coming soon!`,
-        sender: 'bot',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botResponse]);
-    }, 1000);
+  const sendMessage = () => {
+    if (message.trim()) {
+      setChat([...chat, 
+        { id: Date.now(), text: message, sender: 'user' },
+        { id: Date.now() + 1, text: `You said: "${message}". AI response coming soon!`, sender: 'bot' }
+      ]);
+      setMessage('');
+    }
   };
 
   return (
     <div className="App">
-      <header className="app-header">
+      <header>
         <h1>🤖 AI Engineering Assistant</h1>
-        <p>Document Processing & Technical Q&A</p>
+        <p>LHR86 DCEO Support System</p>
       </header>
-
-      <main className="app-main">
-        <div className="chat-container">
-          <div className="messages">
-            {messages.map((message) => (
-              <div key={message.id} className={`message ${message.sender}`}>
-                <div className="message-content">
-                  {message.text}
-                </div>
-                <div className="message-time">
-                  {message.timestamp.toLocaleTimeString()}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="input-container">
-            <input
-              type="text"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Ask me anything about engineering..."
-              className="message-input"
-            />
-            <button onClick={handleSendMessage} className="send-button">
-              Send
-            </button>
-          </div>
+      
+      <main>
+        <div className="chat-box">
+          {chat.map(msg => (
+            <div key={msg.id} className={`message ${msg.sender}`}>
+              {msg.text}
+            </div>
+          ))}
+        </div>
+        
+        <div className="input-area">
+          <input 
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+            placeholder="Ask about procedures, sites, teams..."
+          />
+          <button onClick={sendMessage}>Send</button>
         </div>
       </main>
     </div>
