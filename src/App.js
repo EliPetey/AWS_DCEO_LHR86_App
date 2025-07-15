@@ -7,14 +7,48 @@ function App() {
   const [chat, setChat] = useState([
     { 
       id: 1, 
-      text: '🤖 Welcome to AI Engineering Assistant! I can help you with DCEO procedures, site information, team contacts, and technical documentation. You can also contribute knowledge using the tabs above. How can I assist you today?', 
+      text: '🤖 Welcome to AI Engineering Assistant! I can help you with DCEO procedures, site information, team contacts, and technical documentation. I\'m now powered by your site-trained knowledge base! How can I assist you today?', 
       sender: 'bot',
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString(),
+      sources: 0
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const [activeTab, setActiveTab] = useState('chat');
 
+  // New Amazon Q integration function
+  const getAmazonQResponse = async (userMessage) => {
+    try {
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ inputText: userMessage })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+      
+      return {
+        text: responseBody.response,
+        sources: responseBody.sources_found || 0
+      };
+    } catch (error) {
+      console.error('Amazon Q API Error:', error);
+      return {
+        text: '❌ Sorry, I encountered an error connecting to the knowledge base. Let me try with my basic responses instead.\n\n' + generateBotResponse(userMessage),
+        sources: 0
+      };
+    }
+  };
+
+  // Fallback responses (kept as backup)
   const generateBotResponse = (userMessage) => {
     const lowerMessage = userMessage.toLowerCase();
     
@@ -57,7 +91,7 @@ function App() {
     return `💡 I received your message about "${userMessage}". I can help with DCEO procedures, site operations, team information, electrical/HVAC systems, safety protocols, and documentation. Could you be more specific about what you need assistance with?`;
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!message.trim()) return;
 
     const userMessage = {
@@ -72,16 +106,20 @@ function App() {
     setMessage('');
     setIsTyping(true);
 
+    // Use Amazon Q API
+    const response = await getAmazonQResponse(currentMessage);
+    
     setTimeout(() => {
       const botResponse = {
         id: Date.now() + 1,
-        text: generateBotResponse(currentMessage),
+        text: response.text,
         sender: 'bot',
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString(),
+        sources: response.sources
       };
       setChat(prev => [...prev, botResponse]);
       setIsTyping(false);
-    }, 1500);
+    }, 1000);
   };
 
   const handleKeyPress = (e) => {
@@ -94,9 +132,10 @@ function App() {
   const clearChat = () => {
     setChat([{
       id: 1,
-      text: '🤖 Chat cleared! How can I help you with DCEO operations?',
+      text: '🤖 Chat cleared! I\'m ready to help with DCEO operations using our site-trained knowledge base. What would you like to know?',
       sender: 'bot',
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString(),
+      sources: 0
     }]);
   };
 
@@ -147,7 +186,7 @@ function App() {
             <div className="chat-header">
               <div className="chat-info">
                 <span className="status-indicator online"></span>
-                <span>AI Assistant Online</span>
+                <span>AI Assistant Online (Site-Trained)</span>
               </div>
               <button onClick={clearChat} className="clear-btn">
                 🗑️ Clear Chat
@@ -158,7 +197,16 @@ function App() {
               {chat.map(msg => (
                 <div key={msg.id} className={`message ${msg.sender}`}>
                   <div className="message-content">
-                    <div className="message-text">{msg.text}</div>
+                    <div className="message-text">
+                      {msg.text.split('\n').map((line, i) => (
+                        <div key={i}>{line}</div>
+                      ))}
+                    </div>
+                    {msg.sources > 0 && (
+                      <div className="sources-info">
+                        📚 Found {msg.sources} relevant engineer responses
+                      </div>
+                    )}
                     <div className="message-time">{msg.timestamp}</div>
                   </div>
                 </div>
@@ -172,6 +220,7 @@ function App() {
                       <span></span>
                       <span></span>
                     </div>
+                    <div className="typing-text">Searching knowledge base...</div>
                   </div>
                 </div>
               )}
@@ -183,20 +232,20 @@ function App() {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask about DCEO procedures, site info, team contacts, troubleshooting..."
+                  placeholder="Ask about procedures, equipment, safety, maintenance, commissioning..."
                   rows="1"
                   className="message-input"
                 />
                 <button 
                   onClick={sendMessage} 
-                  disabled={!message.trim()}
+                  disabled={!message.trim() || isTyping}
                   className="send-button"
                 >
-                  📤 Send
+                  {isTyping ? '⏳' : '📤'} Send
                 </button>
               </div>
               <div className="input-help">
-                💡 Try asking about: LHR86 site info, DCEO teams, electrical procedures, HVAC systems, safety protocols, maintenance, emergency contacts
+                💡 Try asking about: rack installation, commissioning procedures, safety protocols, equipment maintenance, troubleshooting steps
               </div>
             </div>
           </div>
@@ -209,11 +258,11 @@ function App() {
       <header className="app-header">
         <div className="header-content">
           <h1>🤖 AI Engineering Assistant</h1>
-          <p>AWS DCEO LHR86 Support System</p>
+          <p>AWS DCEO Knowledge Hub - Site-Trained AI</p>
           <div className="header-badges">
             <span className="badge">DCEO Operations</span>
-            <span className="badge">LHR86 Site</span>
-            <span className="badge">24/7 Support</span>
+            <span className="badge">Site-Trained AI</span>
+            <span className="badge">Knowledge Base</span>
           </div>
           
           <div className="main-navigation">
@@ -221,7 +270,7 @@ function App() {
               className={`nav-btn ${activeTab === 'chat' ? 'active' : ''}`}
               onClick={() => setActiveTab('chat')}
             >
-              💬 Chat Assistant
+              💬 Ask AI Assistant
             </button>
             <button 
               className={`nav-btn ${activeTab === 'knowledge' ? 'active' : ''}`}
@@ -244,7 +293,7 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>AWS Data Center Engineering Operations | LHR86 London Heathrow</p>
+        <p>AWS Data Center Engineering Operations | Site-Trained AI Knowledge System</p>
       </footer>
     </div>
   );
