@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { API } from 'aws-amplify';
 import './KnowledgeCollection.css';
 
 const KnowledgeCollection = () => {
@@ -20,11 +19,16 @@ const KnowledgeCollection = () => {
     setError(null);
     
     try {
-      const response = await API.post('knowledgeAPI', '/questions', {
-        body: { category: selectedCategory }
-      });
+      // Mock question for now - replace with API call later
+      const mockQuestion = {
+        questionId: `question_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        question: `What are the key safety procedures for ${selectedCategory} in the data center?`,
+        category: selectedCategory,
+        subcategory: 'general'
+      };
       
-      setQuestion(response);
+      setQuestion(mockQuestion);
       setResponse('');
       setSubmitted(false);
     } catch (err) {
@@ -42,13 +46,11 @@ const KnowledgeCollection = () => {
     setError(null);
     
     try {
-      await API.post('knowledgeAPI', '/responses', {
-        body: {
-          questionId: question.questionId,
-          timestamp: question.timestamp,
-          response: response,
-          engineerId: 'current-user-id' // Replace with actual user ID
-        }
+      // Mock submission for now - replace with API call later
+      console.log('Submitting response:', {
+        questionId: question.questionId,
+        response: response,
+        category: question.category
       });
       
       setSubmitted(true);
@@ -62,7 +64,7 @@ const KnowledgeCollection = () => {
 
   useEffect(() => {
     fetchQuestion();
-  }, []);
+  }, [selectedCategory]);
 
   return (
     <div className="knowledge-collection">
