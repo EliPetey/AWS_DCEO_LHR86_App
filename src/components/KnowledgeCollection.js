@@ -47,40 +47,51 @@ const KnowledgeCollection = () => {
   };
 
   const submitResponse = async () => {
-    if (!response.trim() || !question) return;
+  if (!response.trim() || !question) return;
+  
+  setLoading(true);
+  setError(null);
+  
+  try {
+    console.log('Submitting response with data:', {
+      questionId: question.questionId,
+      timestamp: question.timestamp,
+      response: response,
+      engineerId: 'current-user'
+    });
     
-    setLoading(true);
-    setError(null);
+    const submitResponse = await fetch(`${API_BASE_URL}/responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        questionId: question.questionId,
+        timestamp: question.timestamp,
+        response: response,
+        engineerId: 'current-user'
+      })
+    });
     
-    try {
-      const submitResponse = await fetch(`${API_BASE_URL}/responses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          questionId: question.questionId,
-          timestamp: question.timestamp,
-          response: response,
-          engineerId: 'current-user'
-        })
-      });
-      
-      if (!submitResponse.ok) {
-        throw new Error(`HTTP error! status: ${submitResponse.status}`);
-      }
-      
-      const result = await submitResponse.json();
-      console.log('Response submitted:', result);
-      setSubmitted(true);
-      
-    } catch (err) {
-      console.error('Error submitting response:', err);
-      setError('Failed to submit response. Please try again.');
-    } finally {
-      setLoading(false);
+    console.log('Response status:', submitResponse.status);
+    
+    if (!submitResponse.ok) {
+      const errorData = await submitResponse.json();
+      console.error('Error response:', errorData);
+      throw new Error(`HTTP error! status: ${submitResponse.status}`);
     }
-  };
+    
+    const result = await submitResponse.json();
+    console.log('Success response:', result);
+    setSubmitted(true);
+    
+  } catch (err) {
+    console.error('Error submitting response:', err);
+    setError('Failed to submit response. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchQuestion();
