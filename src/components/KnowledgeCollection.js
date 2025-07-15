@@ -12,7 +12,7 @@ const KnowledgeCollection = () => {
   const categories = ['procedures', 'equipment', 'safety', 'maintenance'];
   
   // Your API URL
-  const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
+  const API_BASE_URL = 'https://cors-anywhere.herokuapp.com/https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';;
 
   const fetchQuestion = async () => {
   setLoading(true);
