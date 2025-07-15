@@ -12,12 +12,12 @@ const KnowledgeCollection = () => {
   const categories = ['procedures', 'equipment', 'safety', 'maintenance'];
   
   // Your API URL
-const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
+  const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
 
   const fetchQuestion = async () => {
-  setLoading(true);
-  setError(null);
-  setSubmitted(false);
+    setLoading(true);
+    setError(null);
+    setSubmitted(false);
   
   try {
     const response = await fetch(`${API_BASE_URL}/questions`, {
@@ -34,13 +34,29 @@ const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/pro
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    const data = await response.json();
-    console.log('Loaded question data:', data);
+    const rawData = await response.json();
+    console.log('Raw API response:', rawData);
+    
+    // Check if we got a Lambda response format
+    let data;
+    if (rawData.statusCode && rawData.body) {
+      // Parse the body string to get actual data
+      if (typeof rawData.body === 'string') {
+        data = JSON.parse(rawData.body);
+      } else {
+        data = rawData.body;
+      }
+    } else {
+      // Direct response format
+      data = rawData;
+    }
+    
+    console.log('Parsed question data:', data);
     console.log('Question ID:', data.questionId);
     console.log('Timestamp:', data.timestamp);
     console.log('Question text:', data.question);
     
-    // More lenient validation - just check if essential fields exist
+    // Validate the parsed data
     if (!data.questionId || !data.timestamp || !data.question) {
       console.error('Missing required fields in question data:', {
         hasQuestionId: !!data.questionId,
@@ -64,66 +80,80 @@ const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/pro
 };
 
   const submitResponse = async () => {
-    // Validate response input
-    if (!response.trim()) {
-      setError('Please enter a response before submitting.');
-      return;
+  // Validate response input
+  if (!response.trim()) {
+    setError('Please enter a response before submitting.');
+    return;
+  }
+  
+  // Validate question exists
+  if (!question) {
+    setError('No question loaded. Please refresh and try again.');
+    return;
+  }
+  
+  // Validate required question fields
+  if (!question.questionId || !question.timestamp) {
+    console.error('Missing question data:', question);
+    setError('Question data is incomplete. Please refresh and try again.');
+    return;
+  }
+  
+  setLoading(true);
+  setError(null);
+  
+  try {
+    const requestData = {
+      questionId: question.questionId,
+      timestamp: question.timestamp,
+      response: response.trim(),
+      engineerId: 'current-user'
+    };
+    
+    console.log('Submitting response with data:', requestData);
+    
+    const submitResponse = await fetch(`${API_BASE_URL}/responses`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestData)
+    });
+    
+    console.log('Response status:', submitResponse.status);
+    
+    if (!submitResponse.ok) {
+      const errorData = await submitResponse.json();
+      console.error('Error response:', errorData);
+      throw new Error(`HTTP error! status: ${submitResponse.status} - ${errorData.error || 'Unknown error'}`);
     }
     
-    // Validate question exists
-    if (!question) {
-      setError('No question loaded. Please refresh and try again.');
-      return;
-    }
+    const rawResult = await submitResponse.json();
+    console.log('Raw submit response:', rawResult);
     
-    // Validate required question fields
-    if (!question.questionId || !question.timestamp) {
-      console.error('Missing question data:', question);
-      setError('Question data is incomplete. Please refresh and try again.');
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const requestData = {
-        questionId: question.questionId,
-        timestamp: question.timestamp,
-        response: response.trim(),
-        engineerId: 'current-user'
-      };
-      
-      console.log('Submitting response with data:', requestData);
-      
-      const submitResponse = await fetch(`${API_BASE_URL}/responses`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-      });
-      
-      console.log('Response status:', submitResponse.status);
-      
-      if (!submitResponse.ok) {
-        const errorData = await submitResponse.json();
-        console.error('Error response:', errorData);
-        throw new Error(`HTTP error! status: ${submitResponse.status} - ${errorData.error || 'Unknown error'}`);
+    // Parse response similar to fetchQuestion
+    let result;
+    if (rawResult.statusCode && rawResult.body) {
+      if (typeof rawResult.body === 'string') {
+        result = JSON.parse(rawResult.body);
+      } else {
+        result = rawResult.body;
       }
-      
-      const result = await submitResponse.json();
-      console.log('Success response:', result);
-      setSubmitted(true);
-      setResponse(''); // Clear the response field
-      
-    } catch (err) {
-      console.error('Error submitting response:', err);
-      setError(`Failed to submit response: ${err.message}`);
-    } finally {
-      setLoading(false);
+    } else {
+      result = rawResult;
     }
-  };
+    
+    console.log('Parsed submit response:', result);
+    setSubmitted(true);
+    setResponse(''); // Clear the response field
+    
+  } catch (err) {
+    console.error('Error submitting response:', err);
+    setError(`Failed to submit response: ${err.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchQuestion();
