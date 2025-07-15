@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
-import KnowledgeCollection from './components/KnowledgeCollection';
-import FileOrganizer from './components/FileOrganizer';
+import KnowledgeCollection from './Components/KnowledgeCollection';
+import FileOrganizer from './Components/FileOrganizer';
 
 function App() {
   const [message, setMessage] = useState('');
