@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import './App.css';
-import KnowledgeCollection from './Components/KnowledgeCollection';
-import FileOrganizer from './Components/FileOrganizer';
+import KnowledgeCollection from './components/KnowledgeCollection';
+import FileOrganizer from './components/FileOrganizer';
 
 function App() {
   const [message, setMessage] = useState('');
   const [chat, setChat] = useState([
     { 
       id: 1, 
-      text: '🤖 Welcome to AI Engineering Assistant! I can help you with DCEO procedures, site information, team contacts, and technical documentation. You can also contribute knowledge or organize files using the tabs above. How can I assist you today?', 
+      text: '🤖 Welcome to AI Engineering Assistant! I can help you with DCEO procedures, site information, team contacts, and technical documentation. How can I assist you today?', 
       sender: 'bot',
       timestamp: new Date().toLocaleTimeString()
     }
@@ -19,49 +19,23 @@ function App() {
   const generateBotResponse = (userMessage) => {
     const lowerMessage = userMessage.toLowerCase();
     
-    // Enhanced responses based on keywords
     if (lowerMessage.includes('lhr86') || lowerMessage.includes('london')) {
-      return '🏢 LHR86 is our London Heathrow data center. The DCEO team handles electrical, HVAC, and life safety systems. For urgent issues, contact the duty phone or escalate through the proper channels. Need specific contact information?';
+      return '🏢 LHR86 is our London Heathrow data center. The DCEO team handles electrical, HVAC, and life safety systems. For urgent issues, contact the duty phone or escalate through the proper channels.';
     }
     
     if (lowerMessage.includes('dceo') || lowerMessage.includes('team')) {
-      return '👥 DCEO (Data Center Engineering Operations) is responsible for electrical, HVAC, and life safety systems. We perform troubleshooting, maintenance, and vendor management. Which specific DCEO function do you need help with?';
+      return '👥 DCEO (Data Center Engineering Operations) is responsible for electrical, HVAC, and life safety systems. We perform troubleshooting, maintenance, and vendor management.';
     }
     
     if (lowerMessage.includes('electrical') || lowerMessage.includes('power')) {
-      return '⚡ For electrical issues: Check EPMS system, verify breaker status, and follow lockout/tagout procedures. Always use Two-Person Verification (TPVR) for critical work. Need specific electrical troubleshooting steps?';
-    }
-    
-    if (lowerMessage.includes('hvac') || lowerMessage.includes('cooling') || lowerMessage.includes('crah')) {
-      return '❄️ For HVAC/cooling issues: Monitor BMS system, check CRAH units, verify chilled water flow, and inspect dampers. Maintain redundancy at all times. What specific cooling issue are you experiencing?';
-    }
-    
-    if (lowerMessage.includes('emergency') || lowerMessage.includes('urgent')) {
-      return '🚨 For emergencies: Contact duty phone immediately, follow emergency procedures, ensure safety first. For life safety issues, evacuate if necessary and call emergency services. What type of emergency are you dealing with?';
-    }
-    
-    if (lowerMessage.includes('procedure') || lowerMessage.includes('sop')) {
-      return '📋 Standard Operating Procedures (SOPs) are available in the documentation system. Common procedures include: maintenance protocols, safety lockout, equipment commissioning, and emergency response. Which procedure do you need?';
-    }
-    
-    if (lowerMessage.includes('contact') || lowerMessage.includes('phone')) {
-      return '📞 Key contacts: Facility Manager, Chief Engineer, duty phone numbers are in the org chart. For escalations, follow the proper chain of command. Which team or person do you need to contact?';
-    }
-    
-    if (lowerMessage.includes('ticket') || lowerMessage.includes('tt')) {
-      return '🎫 For ticketing: Use SIM-T for issue tracking, select proper CTI (Category/Type/Item), include detailed description and site information. Need help with ticket creation or CTI selection?';
-    }
-    
-    if (lowerMessage.includes('safety') || lowerMessage.includes('lockout')) {
-      return '🔒 Safety first! Follow lockout/tagout procedures, use proper PPE, implement Two-Person Verification (TPVR) for critical work. Never bypass safety protocols. What safety procedure do you need guidance on?';
+      return '⚡ For electrical issues: Check EPMS system, verify breaker status, and follow lockout/tagout procedures. Always use Two-Person Verification (TPVR) for critical work.';
     }
     
     if (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('help')) {
-      return '👋 Hello! I\'m here to help with DCEO operations. I can assist with procedures, site information, team contacts, troubleshooting, and documentation. What would you like to know about?';
+      return '👋 Hello! I\'m here to help with DCEO operations. I can assist with procedures, site information, team contacts, troubleshooting, and documentation.';
     }
     
-    // Default response
-    return `💡 I received your message about "${userMessage}". I can help with DCEO procedures, site operations, team information, electrical/HVAC systems, safety protocols, and documentation. Could you be more specific about what you need assistance with?`;
+    return `💡 I received your message about "${userMessage}". I can help with DCEO procedures, site operations, team information, electrical/HVAC systems, safety protocols, and documentation.`;
   };
 
   const sendMessage = () => {
@@ -78,7 +52,6 @@ function App() {
     setMessage('');
     setIsTyping(true);
 
-    // Simulate bot thinking time
     setTimeout(() => {
       const botResponse = {
         id: Date.now() + 1,
@@ -155,7 +128,7 @@ function App() {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask about DCEO procedures, site info, team contacts, troubleshooting..."
+                  placeholder="Ask about DCEO procedures, site info, team contacts..."
                   rows="1"
                   className="message-input"
                 />
@@ -166,9 +139,6 @@ function App() {
                 >
                   📤 Send
                 </button>
-              </div>
-              <div className="input-help">
-                💡 Try asking about: LHR86 site info, DCEO teams, electrical procedures, HVAC systems, safety protocols
               </div>
             </div>
           </div>
