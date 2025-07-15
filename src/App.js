@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import './App.css';
+import KnowledgeCollection from './components/KnowledgeCollection';
+import FileOrganizer from './components/FileOrganizer';
 
 function App() {
   const [message, setMessage] = useState('');
   const [chat, setChat] = useState([
     { 
       id: 1, 
-      text: '🤖 Welcome to AI Engineering Assistant! I can help you with DCEO procedures, site information, team contacts, and technical documentation. How can I assist you today?', 
+      text: '🤖 Welcome to AI Engineering Assistant! I can help you with DCEO procedures, site information, team contacts, and technical documentation. You can also contribute knowledge or organize files using the tabs above. How can I assist you today?', 
       sender: 'bot',
       timestamp: new Date().toLocaleTimeString()
     }
   ]);
   const [isTyping, setIsTyping] = useState(false);
+  const [activeTab, setActiveTab] = useState('chat');
 
   const generateBotResponse = (userMessage) => {
     const lowerMessage = userMessage.toLowerCase();
@@ -104,6 +107,75 @@ function App() {
     }]);
   };
 
+  const renderContent = () => {
+    switch(activeTab) {
+      case 'knowledge':
+        return <KnowledgeCollection />;
+      case 'organizer':
+        return <FileOrganizer />;
+      default:
+        return (
+          <div className="chat-container">
+            <div className="chat-header">
+              <div className="chat-info">
+                <span className="status-indicator online"></span>
+                <span>AI Assistant Online</span>
+              </div>
+              <button onClick={clearChat} className="clear-btn">
+                🗑️ Clear Chat
+              </button>
+            </div>
+
+            <div className="chat-messages">
+              {chat.map(msg => (
+                <div key={msg.id} className={`message ${msg.sender}`}>
+                  <div className="message-content">
+                    <div className="message-text">{msg.text}</div>
+                    <div className="message-time">{msg.timestamp}</div>
+                  </div>
+                </div>
+              ))}
+              
+              {isTyping && (
+                <div className="message bot typing">
+                  <div className="message-content">
+                    <div className="typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="chat-input">
+              <div className="input-container">
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask about DCEO procedures, site info, team contacts, troubleshooting..."
+                  rows="1"
+                  className="message-input"
+                />
+                <button 
+                  onClick={sendMessage} 
+                  disabled={!message.trim()}
+                  className="send-button"
+                >
+                  📤 Send
+                </button>
+              </div>
+              <div className="input-help">
+                💡 Try asking about: LHR86 site info, DCEO teams, electrical procedures, HVAC systems, safety protocols
+              </div>
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="App">
       <header className="app-header">
@@ -115,67 +187,32 @@ function App() {
             <span className="badge">LHR86 Site</span>
             <span className="badge">24/7 Support</span>
           </div>
+          
+          <div className="main-navigation">
+            <button 
+              className={`nav-btn ${activeTab === 'chat' ? 'active' : ''}`}
+              onClick={() => setActiveTab('chat')}
+            >
+              💬 Chat Assistant
+            </button>
+            <button 
+              className={`nav-btn ${activeTab === 'knowledge' ? 'active' : ''}`}
+              onClick={() => setActiveTab('knowledge')}
+            >
+              🧠 Share Knowledge
+            </button>
+            <button 
+              className={`nav-btn ${activeTab === 'organizer' ? 'active' : ''}`}
+              onClick={() => setActiveTab('organizer')}
+            >
+              📁 Organize Files
+            </button>
+          </div>
         </div>
       </header>
       
       <main className="app-main">
-        <div className="chat-container">
-          <div className="chat-header">
-            <div className="chat-info">
-              <span className="status-indicator online"></span>
-              <span>AI Assistant Online</span>
-            </div>
-            <button onClick={clearChat} className="clear-btn">
-              🗑️ Clear Chat
-            </button>
-          </div>
-
-          <div className="chat-messages">
-            {chat.map(msg => (
-              <div key={msg.id} className={`message ${msg.sender}`}>
-                <div className="message-content">
-                  <div className="message-text">{msg.text}</div>
-                  <div className="message-time">{msg.timestamp}</div>
-                </div>
-              </div>
-            ))}
-            
-            {isTyping && (
-              <div className="message bot typing">
-                <div className="message-content">
-                  <div className="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="chat-input">
-            <div className="input-container">
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask about DCEO procedures, site info, team contacts, troubleshooting..."
-                rows="1"
-                className="message-input"
-              />
-              <button 
-                onClick={sendMessage} 
-                disabled={!message.trim()}
-                className="send-button"
-              >
-                📤 Send
-              </button>
-            </div>
-            <div className="input-help">
-              💡 Try asking about: LHR86 site info, DCEO teams, electrical procedures, HVAC systems, safety protocols
-            </div>
-          </div>
-        </div>
+        {renderContent()}
       </main>
 
       <footer className="app-footer">
