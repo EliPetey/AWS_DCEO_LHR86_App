@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
 import './App.css';
-import KnowledgeCollection from './components/KnowledgeCollection';
-import FileOrganizer from './components/FileOrganizer';
 
 function App() {
   const [message, setMessage] = useState('');
@@ -49,13 +47,14 @@ function App() {
     };
 
     setChat(prev => [...prev, userMessage]);
+    const currentMessage = message;
     setMessage('');
     setIsTyping(true);
 
     setTimeout(() => {
       const botResponse = {
         id: Date.now() + 1,
-        text: generateBotResponse(message),
+        text: generateBotResponse(currentMessage),
         sender: 'bot',
         timestamp: new Date().toLocaleTimeString()
       };
@@ -79,6 +78,23 @@ function App() {
       timestamp: new Date().toLocaleTimeString()
     }]);
   };
+
+  // Placeholder components - inline for now
+  const KnowledgeCollection = () => (
+    <div style={{ padding: '2rem', textAlign: 'center', background: 'white', borderRadius: '10px', margin: '1rem' }}>
+      <h2>🧠 Knowledge Collection</h2>
+      <p>This feature is coming soon!</p>
+      <p>Engineers will be able to share their expertise here to improve the AI.</p>
+    </div>
+  );
+
+  const FileOrganizer = () => (
+    <div style={{ padding: '2rem', textAlign: 'center', background: 'white', borderRadius: '10px', margin: '1rem' }}>
+      <h2>📁 File Organizer</h2>
+      <p>This feature is coming soon!</p>
+      <p>AI will help organize your files based on expert knowledge.</p>
+    </div>
+  );
 
   const renderContent = () => {
     switch(activeTab) {
