@@ -15,45 +15,53 @@ const KnowledgeCollection = () => {
   const API_BASE_URL = 'https://8nr14rqyqa.execute-api.eu-west-2.amazonaws.com/prod';
 
   const fetchQuestion = async () => {
-    setLoading(true);
-    setError(null);
-    setSubmitted(false);
+  setLoading(true);
+  setError(null);
+  setSubmitted(false);
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/questions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        category: selectedCategory
+      })
+    });
     
-    try {
-      const response = await fetch(`${API_BASE_URL}/questions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          category: selectedCategory
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Loaded question data:', data);
-      
-      // Validate the question data
-      if (!data.questionId || !data.timestamp || !data.question) {
-        console.error('Invalid question data received:', data);
-        throw new Error('Invalid question data received from server');
-      }
-      
-      setQuestion(data);
-      setResponse('');
-      
-    } catch (err) {
-      console.error('Error fetching question:', err);
-      setError('Failed to load question. Please try again.');
-      setQuestion(null);
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+    
+    const data = await response.json();
+    console.log('Loaded question data:', data);
+    console.log('Question ID:', data.questionId);
+    console.log('Timestamp:', data.timestamp);
+    console.log('Question text:', data.question);
+    
+    // More lenient validation - just check if essential fields exist
+    if (!data.questionId || !data.timestamp || !data.question) {
+      console.error('Missing required fields in question data:', {
+        hasQuestionId: !!data.questionId,
+        hasTimestamp: !!data.timestamp,
+        hasQuestion: !!data.question,
+        actualData: data
+      });
+      throw new Error('Invalid question data received from server');
+    }
+    
+    setQuestion(data);
+    setResponse('');
+    
+  } catch (err) {
+    console.error('Error fetching question:', err);
+    setError('Failed to load question. Please try again.');
+    setQuestion(null);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const submitResponse = async () => {
     // Validate response input
