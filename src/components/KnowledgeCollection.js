@@ -17,6 +17,7 @@ const KnowledgeCollection = () => {
   const fetchQuestion = async () => {
     setLoading(true);
     setError(null);
+    setSubmitted(false);
     
     try {
       const response = await fetch(`${API_BASE_URL}/questions`, {
@@ -34,64 +35,87 @@ const KnowledgeCollection = () => {
       }
       
       const data = await response.json();
+      console.log('Loaded question data:', data);
+      
+      // Validate the question data
+      if (!data.questionId || !data.timestamp || !data.question) {
+        console.error('Invalid question data received:', data);
+        throw new Error('Invalid question data received from server');
+      }
+      
       setQuestion(data);
       setResponse('');
-      setSubmitted(false);
       
     } catch (err) {
       console.error('Error fetching question:', err);
       setError('Failed to load question. Please try again.');
+      setQuestion(null);
     } finally {
       setLoading(false);
     }
   };
 
   const submitResponse = async () => {
-  if (!response.trim() || !question) return;
-  
-  setLoading(true);
-  setError(null);
-  
-  try {
-    console.log('Submitting response with data:', {
-      questionId: question.questionId,
-      timestamp: question.timestamp,
-      response: response,
-      engineerId: 'current-user'
-    });
-    
-    const submitResponse = await fetch(`${API_BASE_URL}/responses`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        questionId: question.questionId,
-        timestamp: question.timestamp,
-        response: response,
-        engineerId: 'current-user'
-      })
-    });
-    
-    console.log('Response status:', submitResponse.status);
-    
-    if (!submitResponse.ok) {
-      const errorData = await submitResponse.json();
-      console.error('Error response:', errorData);
-      throw new Error(`HTTP error! status: ${submitResponse.status}`);
+    // Validate response input
+    if (!response.trim()) {
+      setError('Please enter a response before submitting.');
+      return;
     }
     
-    const result = await submitResponse.json();
-    console.log('Success response:', result);
-    setSubmitted(true);
+    // Validate question exists
+    if (!question) {
+      setError('No question loaded. Please refresh and try again.');
+      return;
+    }
     
-  } catch (err) {
-    console.error('Error submitting response:', err);
-    setError('Failed to submit response. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
+    // Validate required question fields
+    if (!question.questionId || !question.timestamp) {
+      console.error('Missing question data:', question);
+      setError('Question data is incomplete. Please refresh and try again.');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const requestData = {
+        questionId: question.questionId,
+        timestamp: question.timestamp,
+        response: response.trim(),
+        engineerId: 'current-user'
+      };
+      
+      console.log('Submitting response with data:', requestData);
+      
+      const submitResponse = await fetch(`${API_BASE_URL}/responses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+      
+      console.log('Response status:', submitResponse.status);
+      
+      if (!submitResponse.ok) {
+        const errorData = await submitResponse.json();
+        console.error('Error response:', errorData);
+        throw new Error(`HTTP error! status: ${submitResponse.status} - ${errorData.error || 'Unknown error'}`);
+      }
+      
+      const result = await submitResponse.json();
+      console.log('Success response:', result);
+      setSubmitted(true);
+      setResponse(''); // Clear the response field
+      
+    } catch (err) {
+      console.error('Error submitting response:', err);
+      setError(`Failed to submit response: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchQuestion();
