@@ -11,6 +11,9 @@ const InterviewSystem = () => {
   const [feedbackText, setFeedbackText] = useState('');
   const [structureApproved, setStructureApproved] = useState(false);
 
+  // Updated API endpoint to use AmazonQKnowledgeAPI
+  const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
+
   const interviewTopics = [
     {
       id: 'file_organization',
@@ -45,7 +48,8 @@ const InterviewSystem = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      // Updated to use AmazonQKnowledgeAPI with /questions endpoint
+      const response = await fetch(`${API_BASE_URL}/questions`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -53,9 +57,15 @@ const InterviewSystem = () => {
         },
         body: JSON.stringify({ 
           inputText: `START_INTERVIEW:${topicId}`,
-          interviewMode: true
+          interviewMode: true,
+          topic: topicId,
+          engineerId: 'current-engineer'
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
@@ -96,7 +106,8 @@ const InterviewSystem = () => {
     setInputText('');
 
     try {
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      // Updated to use AmazonQKnowledgeAPI with conversation history
+      const response = await fetch(`${API_BASE_URL}/questions`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -105,9 +116,15 @@ const InterviewSystem = () => {
         body: JSON.stringify({ 
           inputText: currentInput,
           interviewMode: true,
-          topic: currentTopic
+          topic: currentTopic,
+          conversationHistory: messages,
+          engineerId: 'current-engineer'
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
@@ -145,7 +162,8 @@ const InterviewSystem = () => {
 
   const generateFileStructure = async () => {
     try {
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      // Updated to use AmazonQKnowledgeAPI
+      const response = await fetch(`${API_BASE_URL}/questions`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -154,9 +172,14 @@ const InterviewSystem = () => {
         body: JSON.stringify({ 
           inputText: 'GENERATE_FILE_STRUCTURE',
           interviewMode: true,
-          topic: currentTopic
+          topic: currentTopic,
+          engineerId: 'current-engineer'
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
@@ -174,6 +197,13 @@ const InterviewSystem = () => {
       
     } catch (error) {
       console.error('Error generating structure:', error);
+      const errorMessage = {
+        id: Date.now() + 2,
+        text: '❌ Sorry, there was an error generating the file structure.',
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
   };
 
@@ -223,7 +253,8 @@ const InterviewSystem = () => {
 
   const generateImprovedStructure = async () => {
     try {
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      // Updated to use AmazonQKnowledgeAPI
+      const response = await fetch(`${API_BASE_URL}/questions`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -232,9 +263,14 @@ const InterviewSystem = () => {
         body: JSON.stringify({ 
           inputText: 'REGENERATE_STRUCTURE_WITH_FEEDBACK',
           interviewMode: true,
-          topic: currentTopic
+          topic: currentTopic,
+          engineerId: 'current-engineer'
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
@@ -251,6 +287,13 @@ const InterviewSystem = () => {
       
     } catch (error) {
       console.error('Error generating improved structure:', error);
+      const errorMessage = {
+        id: Date.now() + 3,
+        text: '❌ Sorry, there was an error generating the improved structure.',
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -258,13 +301,15 @@ const InterviewSystem = () => {
 
   const saveFeedback = async (type, feedback) => {
     try {
-      await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      // Updated to use AmazonQKnowledgeAPI
+      await fetch(`${API_BASE_URL}/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           inputText: `FEEDBACK:${type}:${feedback}`,
           interviewMode: true,
-          topic: currentTopic
+          topic: currentTopic,
+          engineerId: 'current-engineer'
         })
       });
     } catch (error) {
