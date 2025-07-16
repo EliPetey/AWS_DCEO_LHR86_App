@@ -460,11 +460,11 @@ const InterviewSystem = () => {
         <div className="structure-display">
           {messages.filter(msg => msg.isStructure).map(msg => (
             <div key={msg.id} className="structure-content">
-              {msg.text.split('\n').map((line, i) => (
-                <div key={i}>{line}</div>
-              ))}
+                {(msg.text || '').split('\n').map((line, i) => (
+                    <div key={i}>{line}</div>
+                ))}
             </div>
-          ))}
+            ))}
         </div>
 
         {!structureApproved && !showFeedbackInput && (
@@ -558,10 +558,10 @@ const InterviewSystem = () => {
           <div key={msg.id} className={`interview-message ${msg.sender}`}>
             <div className="message-content">
               <div className="message-text">
-                {msg.text.split('\n').map((line, i) => (
-                  <div key={i}>{line}</div>
+                {(msg.text || '').split('\n').map((line, i) => (
+                     <div key={i}>{line}</div>
                 ))}
-              </div>
+            </div>
               <div className="message-time">{msg.timestamp}</div>
             </div>
           </div>
