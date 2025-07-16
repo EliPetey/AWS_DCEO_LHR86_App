@@ -42,123 +42,156 @@ const InterviewSystem = () => {
   ];
 
   const startInterview = async (topicId) => {
-    const topic = interviewTopics.find(t => t.id === topicId);
-    setCurrentTopic(topic.title);
-    setInterviewState('active');
+  try {
     setLoading(true);
+    setError('');
+    
+    console.log('Starting interview for topic:', topicId);
+    
+    const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputText: `START_INTERVIEW:${topicId}`,
+        interviewMode: true,
+        topic: topicId,
+        engineerId: 'current-engineer'
+      })
+    });
 
-    try {
-      // Updated to use AmazonQKnowledgeAPI with /questions endpoint
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          inputText: `START_INTERVIEW:${topicId}`,
-          interviewMode: true,
-          topic: topicId,
-          engineerId: 'current-engineer'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
-      
-      setMessages([{
-        id: 1,
-        text: responseBody.response,
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString()
-      }]);
-      
-    } catch (error) {
-      console.error('Error starting interview:', error);
-      setMessages([{
-        id: 1,
-        text: '❌ Sorry, there was an error starting the interview. Please try again.',
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString()
-      }]);
-    } finally {
-      setLoading(false);
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
 
-  const sendResponse = async () => {
-    if (!inputText.trim()) return;
+    const data = await response.json();
+    console.log('Full response data:', data);
 
+    // Safe way to extract the response
+    let aiResponse;
+    if (data.response) {
+      aiResponse = data.response;
+    } else if (data.body && typeof data.body === 'string') {
+      const parsedBody = JSON.parse(data.body);
+      aiResponse = parsedBody.response;
+    } else if (data.body && data.body.response) {
+      aiResponse = data.body.response;
+    } else {
+      console.error('Unexpected response format:', data);
+      aiResponse = 'Error: Unexpected response format from server';
+    }
+
+    console.log('Extracted AI response:', aiResponse);
+
+    // Clear previous messages and add the first question
+    setMessages([{
+      id: 1,
+      text: aiResponse,
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString()
+    }]);
+
+    setCurrentTopic(topicId);
+    setInterviewActive(true);
+    setInterviewComplete(false);
+
+  } catch (error) {
+    console.error('Error starting interview:', error);
+    setError('Sorry, there was an error starting the interview. Please try again.');
+  } finally {
+    setLoading(false);
+  }
+};
+
+ const sendResponse = async () => {
+  if (!inputText.trim()) return;
+
+  try {
+    setLoading(true);
+    
+    // Add user message immediately
     const userMessage = {
       id: Date.now(),
       text: inputText,
       sender: 'user',
       timestamp: new Date().toLocaleTimeString()
     };
-
+    
     setMessages(prev => [...prev, userMessage]);
-    setLoading(true);
     const currentInput = inputText;
     setInputText('');
 
-    try {
-      // Updated to use AmazonQKnowledgeAPI with conversation history
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          inputText: currentInput,
-          interviewMode: true,
-          topic: currentTopic,
-          conversationHistory: messages,
-          engineerId: 'current-engineer'
-        })
-      });
+    console.log('Sending response:', currentInput);
+    console.log('Current conversation history:', messages);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputText: currentInput,
+        interviewMode: true,
+        topic: currentTopic,
+        conversationHistory: [...messages, userMessage],
+        engineerId: 'current-engineer'
+      })
+    });
 
-      const data = await response.json();
-      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
-      
-      const aiMessage = {
-        id: Date.now() + 1,
-        text: responseBody.response,
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString()
-      };
+    console.log('Response status:', response.status);
 
-      setMessages(prev => [...prev, aiMessage]);
-
-      // Check if interview is complete
-      if (responseBody.interviewComplete) {
-        setInterviewState('analyzing');
-        setTimeout(() => {
-          generateFileStructure();
-        }, 2000);
-      }
-      
-    } catch (error) {
-      console.error('Error sending response:', error);
-      const errorMessage = {
-        id: Date.now() + 1,
-        text: '❌ Sorry, there was an error processing your response. Please try again.',
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+    console.log('Full response data:', data);
+
+    // Safe way to extract the response
+    let aiResponse;
+    if (data.response) {
+      aiResponse = data.response;
+    } else if (data.body && typeof data.body === 'string') {
+      const parsedBody = JSON.parse(data.body);
+      aiResponse = parsedBody.response;
+    } else if (data.body && data.body.response) {
+      aiResponse = data.body.response;
+    } else {
+      console.error('Unexpected response format:', data);
+      aiResponse = 'Sorry, there was an error processing your response. Please try again.';
+    }
+
+    console.log('Extracted AI response:', aiResponse);
+
+    // Add AI response
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      text: aiResponse,
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString()
+    }]);
+
+    // Check if interview is complete
+    if (data.interviewComplete) {
+      setInterviewComplete(true);
+      setInterviewActive(false);
+    }
+
+  } catch (error) {
+    console.error('Error sending response:', error);
+    setMessages(prev => [...prev, {
+      id: Date.now(),
+      text: 'Sorry, there was an error processing your response. Please try again.',
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString()
+    }]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const generateFileStructure = async () => {
     try {
