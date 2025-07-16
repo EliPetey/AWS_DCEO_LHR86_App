@@ -5,7 +5,7 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-scripts": "^5.0.1"
+    "react-scripts": "5.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -29,18 +29,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "description": "A React-based web application for engineers to interact with AI for document processing and technical Q&A.",
-  "main": "index.js",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/EliPetey/AWS_DCEO_LHR86_App.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/EliPetey/AWS_DCEO_LHR86_App/issues"
-  },
-  "homepage": "https://github.com/EliPetey/AWS_DCEO_LHR86_App#readme"
+  }
 }
