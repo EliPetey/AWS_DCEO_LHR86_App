@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect} from 'react';
 import './InterviewSystem.css';
 
 const InterviewSystem = () => {
@@ -10,6 +10,9 @@ const InterviewSystem = () => {
   const [showFeedbackInput, setShowFeedbackInput] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [structureApproved, setStructureApproved] = useState(false);
+  const [error, setError] = useState('');
+  const [interviewActive, setInterviewActive] = useState(false);
+  const [interviewComplete, setInterviewComplete] = useState(false);
 
   // Updated API endpoint to use AmazonQKnowledgeAPI
   const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
