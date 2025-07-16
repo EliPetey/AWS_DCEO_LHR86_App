@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
 import KnowledgeCollection from './components/KnowledgeCollection';
+import InterviewSystem from './components/InterviewSystem';
 
 function App() {
   const [message, setMessage] = useState('');
@@ -180,6 +181,8 @@ function App() {
         return <KnowledgeCollection />;
       case 'organizer':
         return <FileOrganizer />;
+      case 'interview':
+        return <InterviewSystem />;
       default:
         return (
           <div className="chat-container">
@@ -283,6 +286,12 @@ function App() {
               onClick={() => setActiveTab('organizer')}
             >
               📁 Organize Files
+            </button>
+            <button 
+              className={`nav-btn ${activeTab === 'interview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('interview')}
+            >
+              🎤 Structure Interview
             </button>
           </div>
         </div>
