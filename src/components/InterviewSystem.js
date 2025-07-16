@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import './InterviewSystem.css';
 
 const InterviewSystem = () => {
-  const [interviewState, setInterviewState] = useState('start'); // start, active, analyzing
+  const [interviewState, setInterviewState] = useState('start'); // start, active, analyzing, feedback
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentTopic, setCurrentTopic] = useState('');
+  const [showFeedbackInput, setShowFeedbackInput] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [structureApproved, setStructureApproved] = useState(false);
 
   const interviewTopics = [
     {
@@ -167,9 +170,105 @@ const InterviewSystem = () => {
       };
 
       setMessages(prev => [...prev, structureMessage]);
+      setInterviewState('feedback');
       
     } catch (error) {
       console.error('Error generating structure:', error);
+    }
+  };
+
+  const provideFeedback = (type) => {
+    if (type === 'approve') {
+      // Save approval
+      saveFeedback('APPROVED', 'Structure approved by engineer');
+      setStructureApproved(true);
+      
+      const approvalMessage = {
+        id: Date.now(),
+        text: '🎉 **Thank you for your approval!**\n\nYour feedback has been recorded. This structure will contribute to our final S3 organization system.\n\n✅ **Status:** Approved by engineer\n📊 **Next:** More engineers will review this structure\n🚀 **Goal:** Build consensus for S3 deployment',
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      
+      setMessages(prev => [...prev, approvalMessage]);
+    } else {
+      setShowFeedbackInput(true);
+    }
+  };
+
+  const submitFeedback = async () => {
+    if (!feedbackText.trim()) return;
+    
+    // Save feedback and regenerate structure
+    await saveFeedback('MODIFICATION_REQUEST', feedbackText);
+    
+    const feedbackMessage = {
+      id: Date.now(),
+      text: `📝 **Feedback received:** "${feedbackText}"\n\n🔄 Let me regenerate the structure based on your suggestions...`,
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString()
+    };
+    
+    setMessages(prev => [...prev, feedbackMessage]);
+    
+    // Regenerate structure with feedback
+    setLoading(true);
+    setTimeout(() => {
+      generateImprovedStructure();
+    }, 2000);
+    
+    setFeedbackText('');
+    setShowFeedbackInput(false);
+  };
+
+  const generateImprovedStructure = async () => {
+    try {
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ 
+          inputText: 'REGENERATE_STRUCTURE_WITH_FEEDBACK',
+          interviewMode: true,
+          topic: currentTopic
+        })
+      });
+
+      const data = await response.json();
+      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+      
+      const improvedStructureMessage = {
+        id: Date.now() + 3,
+        text: `🔄 **Improved Structure Based on Your Feedback:**\n\n${responseBody.response}`,
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString(),
+        isStructure: true
+      };
+
+      setMessages(prev => [...prev, improvedStructureMessage]);
+      
+    } catch (error) {
+      console.error('Error generating improved structure:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveFeedback = async (type, feedback) => {
+    try {
+      await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          inputText: `FEEDBACK:${type}:${feedback}`,
+          interviewMode: true,
+          topic: currentTopic
+        })
+      });
+    } catch (error) {
+      console.error('Error saving feedback:', error);
     }
   };
 
@@ -185,6 +284,9 @@ const InterviewSystem = () => {
     setMessages([]);
     setInputText('');
     setCurrentTopic('');
+    setShowFeedbackInput(false);
+    setFeedbackText('');
+    setStructureApproved(false);
   };
 
   if (interviewState === 'start') {
@@ -194,8 +296,9 @@ const InterviewSystem = () => {
           <h2>🎤 File Organization Interview</h2>
           <p>Help AI understand how engineering documents should be organized</p>
           <div className="interview-stats">
-            <span className="stat">📊 Responses collected: Building knowledge base</span>
-            <span className="stat">🧠 AI Learning: Continuous improvement</span>
+            <span className="stat">📊 Building Knowledge Base</span>
+            <span className="stat">🧠 AI Learning System</span>
+            <span className="stat">🏗️ S3 Structure Planning</span>
           </div>
         </div>
 
@@ -219,27 +322,48 @@ const InterviewSystem = () => {
         </div>
 
         <div className="interview-info">
-          <h3>💡 How it works:</h3>
+          <h3>💡 How the Learning Process Works:</h3>
           <div className="info-grid">
             <div className="info-item">
               <span className="info-icon">🤖</span>
               <div>
-                <strong>AI asks questions</strong>
-                <p>Smart follow-up questions based on your responses</p>
+                <strong>AI asks smart questions</strong>
+                <p>Follow-up questions based on your responses</p>
               </div>
             </div>
             <div className="info-item">
               <span className="info-icon">💾</span>
               <div>
-                <strong>Knowledge is saved</strong>
-                <p>Your insights help build the file organization system</p>
+                <strong>Knowledge is captured</strong>
+                <p>All responses saved for analysis</p>
               </div>
             </div>
             <div className="info-item">
               <span className="info-icon">🏗️</span>
               <div>
                 <strong>Structure generated</strong>
-                <p>AI creates folder structures based on all responses</p>
+                <p>AI creates recommendations</p>
+              </div>
+            </div>
+            <div className="info-item">
+              <span className="info-icon">📝</span>
+              <div>
+                <strong>Feedback & refinement</strong>
+                <p>Approve or request changes</p>
+              </div>
+            </div>
+            <div className="info-item">
+              <span className="info-icon">👥</span>
+              <div>
+                <strong>Multi-engineer consensus</strong>
+                <p>Build agreement across team</p>
+              </div>
+            </div>
+            <div className="info-item">
+              <span className="info-icon">🚀</span>
+              <div>
+                <strong>S3 deployment ready</strong>
+                <p>Final structure for implementation</p>
               </div>
             </div>
           </div>
@@ -252,7 +376,7 @@ const InterviewSystem = () => {
     return (
       <div className="interview-analyzing">
         <div className="analyzing-header">
-          <h2>🧠 Analyzing Responses...</h2>
+          <h2>🧠 Analyzing Your Responses...</h2>
           <p>AI is processing your knowledge to generate file structure recommendations</p>
         </div>
         
@@ -261,13 +385,13 @@ const InterviewSystem = () => {
           <div className="analyzing-text">
             <p>✅ Processing conversation history</p>
             <p>✅ Extracting organizational patterns</p>
-            <p>✅ Generating folder structure</p>
-            <p>🔄 Creating recommendations...</p>
+            <p>✅ Analyzing engineer preferences</p>
+            <p>🔄 Generating structure recommendations...</p>
           </div>
         </div>
 
         <div className="conversation-summary">
-          <h3>📝 Conversation Summary:</h3>
+          <h3>📝 Your Responses Summary:</h3>
           <div className="messages-summary">
             {messages.filter(msg => msg.sender === 'user').map((msg, index) => (
               <div key={index} className="summary-item">
@@ -276,28 +400,100 @@ const InterviewSystem = () => {
             ))}
           </div>
         </div>
+      </div>
+    );
+  }
 
-        {messages.some(msg => msg.isStructure) && (
-          <div className="structure-result">
-            <h3>🏗️ Generated File Structure:</h3>
-            {messages.filter(msg => msg.isStructure).map(msg => (
-              <div key={msg.id} className="structure-content">
-                {msg.text.split('\n').map((line, i) => (
-                  <div key={i}>{line}</div>
-                ))}
-              </div>
-            ))}
+  if (interviewState === 'feedback') {
+    return (
+      <div className="interview-feedback">
+        <div className="feedback-header">
+          <h2>🏗️ Generated File Structure</h2>
+          <p>Based on your responses, here's the recommended organization</p>
+        </div>
+
+        <div className="structure-display">
+          {messages.filter(msg => msg.isStructure).map(msg => (
+            <div key={msg.id} className="structure-content">
+              {msg.text.split('\n').map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        {!structureApproved && !showFeedbackInput && (
+          <div className="structure-feedback">
+            <h3>📝 What do you think of this structure?</h3>
+            <p>Your feedback helps improve the system for everyone</p>
             
-            <div className="structure-actions">
-              <button onClick={resetInterview} className="new-interview-btn">
-                🎤 Start New Interview
+            <div className="feedback-buttons">
+              <button 
+                onClick={() => provideFeedback('approve')} 
+                className="approve-btn"
+              >
+                ✅ This looks good - I approve!
               </button>
-              <button className="implement-btn">
-                🚀 Implement Structure (Coming Soon)
+              <button 
+                onClick={() => provideFeedback('modify')} 
+                className="modify-btn"
+              >
+                🔄 Needs changes - let me provide feedback
               </button>
             </div>
           </div>
         )}
+
+        {showFeedbackInput && (
+          <div className="feedback-input-section">
+            <h4>💭 What changes would you like?</h4>
+            <p>Be specific about what should be different:</p>
+            <textarea
+              placeholder="Example: 'Move safety procedures to top level', 'Add separate folder for commissioning docs', 'Rename Equipment to Hardware'..."
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              rows="4"
+              className="feedback-textarea"
+            />
+            <div className="feedback-actions">
+              <button 
+                onClick={submitFeedback} 
+                className="submit-feedback-btn"
+                disabled={!feedbackText.trim() || loading}
+              >
+                {loading ? '⏳ Processing...' : '📤 Submit Feedback & Regenerate'}
+              </button>
+              <button 
+                onClick={() => setShowFeedbackInput(false)} 
+                className="cancel-feedback-btn"
+              >
+                ❌ Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="feedback-actions-bottom">
+          <button onClick={resetInterview} className="new-interview-btn">
+            🎤 Start New Interview
+          </button>
+          {structureApproved && (
+            <button className="view-consensus-btn">
+              👥 View Team Consensus (Coming Soon)
+            </button>
+          )}
+        </div>
+
+        <div className="next-steps-info">
+          <h4>🚀 What happens next?</h4>
+          <ul>
+            <li>✅ Your feedback is saved and analyzed</li>
+            <li>🤖 AI learns from your preferences</li>
+            <li>👥 Other engineers will also provide input</li>
+            <li>🏗️ Final consensus structure will be created</li>
+            <li>📁 Structure will be deployed to S3 for file organization</li>
+          </ul>
+        </div>
       </div>
     );
   }
@@ -334,7 +530,7 @@ const InterviewSystem = () => {
                 <span></span>
                 <span></span>
               </div>
-              <div className="typing-text">AI is thinking...</div>
+              <div className="typing-text">AI is analyzing your response...</div>
             </div>
           </div>
         )}
@@ -346,7 +542,7 @@ const InterviewSystem = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Share your knowledge and experience..."
+            placeholder="Share your knowledge and experience in detail..."
             rows="3"
             disabled={loading}
           />
@@ -359,7 +555,7 @@ const InterviewSystem = () => {
           </button>
         </div>
         <div className="input-help">
-          💡 Be detailed - your insights help AI understand the best file organization approach!
+          💡 Be detailed - your insights help build the perfect file organization system!
         </div>
       </div>
     </div>
