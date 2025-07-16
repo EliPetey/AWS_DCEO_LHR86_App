@@ -49,7 +49,7 @@ const InterviewSystem = () => {
 
     try {
       // Updated to use AmazonQKnowledgeAPI with /questions endpoint
-      const response = await fetch(`${API_BASE_URL}/questions`, {
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -107,7 +107,7 @@ const InterviewSystem = () => {
 
     try {
       // Updated to use AmazonQKnowledgeAPI with conversation history
-      const response = await fetch(`${API_BASE_URL}/questions`, {
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -163,7 +163,7 @@ const InterviewSystem = () => {
   const generateFileStructure = async () => {
     try {
       // Updated to use AmazonQKnowledgeAPI
-      const response = await fetch(`${API_BASE_URL}/questions`, {
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -254,7 +254,7 @@ const InterviewSystem = () => {
   const generateImprovedStructure = async () => {
     try {
       // Updated to use AmazonQKnowledgeAPI
-      const response = await fetch(`${API_BASE_URL}/questions`, {
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
