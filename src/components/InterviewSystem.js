@@ -45,8 +45,8 @@ const InterviewSystem = () => {
   ];
 
   const startInterview = async (topicId) => {
-  console.log('🎯 BUTTON CLICKED! Topic:', topicId); // Add this line first
-  console.log('Current interview state:', interviewState); // Add this too
+  console.log('🎯 BUTTON CLICKED! Topic:', topicId);
+  console.log('Current interview state:', interviewState);
   
   try {
     setLoading(true);
@@ -60,9 +60,9 @@ const InterviewSystem = () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: `I want to start an interview about ${topicId}. Please ask me the first question about file organization.`,  // ← Changed from inputText
+        message: `I want to start an interview about ${topicId}. Please ask me the first question about file organization.`,
         interviewMode: true,
-        questionIndex: 0  // ← Added this
+        questionIndex: 0
       })
     });
 
@@ -94,9 +94,13 @@ const InterviewSystem = () => {
       timestamp: new Date().toLocaleTimeString()
     }]);
 
+    // IMPORTANT: Update all the states to switch to interview mode
     setCurrentTopic(topicId);
+    setInterviewState('active');  // ← ADD THIS LINE!
     setInterviewActive(true);
     setInterviewComplete(false);
+
+    console.log('✅ Interview started successfully!');
 
   } catch (error) {
     console.error('Error starting interview:', error);
