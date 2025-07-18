@@ -18,36 +18,51 @@ function App() {
   const [activeTab, setActiveTab] = useState('chat');
 
   // New Amazon Q integration function
-  const getAmazonQResponse = async (userMessage) => {
-    try {
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ inputText: userMessage })
-      });
+const getAmazonQResponse = async (userMessage) => {
+  try {
+    console.log('🔍 Sending message:', userMessage);
+    
+    const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        message: userMessage,
+        interviewMode: false 
+      })
+    });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-      const data = await response.json();
+    const data = await response.json();
+    console.log('🔍 Raw API Response:', data);
+    
+    if (data.statusCode === 200) {
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+      console.log('🔍 Parsed Response Body:', responseBody);
       
       return {
         text: responseBody.response,
-        sources: responseBody.sources_found || 0
+        sources: responseBody.sources?.length || 0,  // ← Fixed field name
+        source: responseBody.source  // ← Added source info
       };
-    } catch (error) {
-      console.error('Amazon Q API Error:', error);
-      return {
-        text: '❌ Sorry, I encountered an error connecting to the knowledge base. Let me try with my basic responses instead.\n\n' + generateBotResponse(userMessage),
-        sources: 0
-      };
+    } else {
+      console.error('API Error:', data);
+      throw new Error('API returned error status');
     }
-  };
+    
+  } catch (error) {
+    console.error('Amazon Q API Error:', error);
+    return {
+      text: '❌ Sorry, I encountered an error connecting to the knowledge base. Let me try with my basic responses instead.\n\n' + generateBotResponse(userMessage),
+      sources: 0
+    };
+  }
+};
 
   // Fallback responses (kept as backup)
   const generateBotResponse = (userMessage) => {
