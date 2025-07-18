@@ -195,25 +195,31 @@ function App() {
                 🗑️ Clear Chat
               </button>
             </div>
-
+              
             <div className="chat-messages">
               {chat.map(msg => (
                 <div key={msg.id} className={`message ${msg.sender}`}>
                   <div className="message-content">
                     <div className="message-text">
-                      {msg.text.split('\n').map((line, i) => (
+                      {(msg.text || msg.response || '').split('\n').map((line, i) => (
                         <div key={i}>{line}</div>
                       ))}
                     </div>
-                    {msg.sources > 0 && (
+                    {(msg.sources || 0) > 0 && (
                       <div className="sources-info">
                         📚 Found {msg.sources} relevant engineer responses
+                      </div>
+                    )}
+                    {msg.source && (
+                      <div className="ai-source">
+                        🤖 Powered by: {msg.source}
                       </div>
                     )}
                     <div className="message-time">{msg.timestamp}</div>
                   </div>
                 </div>
               ))}
+
               
               {isTyping && (
                 <div className="message bot typing">
