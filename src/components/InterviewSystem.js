@@ -45,6 +45,9 @@ const InterviewSystem = () => {
   ];
 
   const startInterview = async (topicId) => {
+  console.log('🎯 BUTTON CLICKED! Topic:', topicId); // Add this line first
+  console.log('Current interview state:', interviewState); // Add this too
+  
   try {
     setLoading(true);
     setError('');
