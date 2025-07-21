@@ -37,6 +37,7 @@ const InterviewSystem = () => {
   // ✅ CURRENT STRUCTURE STATE - SEPARATE FROM MESSAGES
   const [currentStructure, setCurrentStructure] = useState('');
   const [structureUpdateTrigger, setStructureUpdateTrigger] = useState(0);
+  const [structureError, setStructureError] = useState('');
 
   // Updated API endpoint
   const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
@@ -127,6 +128,70 @@ const InterviewSystem = () => {
     }
   }, [feedbackMessages, feedbackLoading, showFeedbackInput]);
 
+  // ✅ CHECK IF RESPONSE IS A VALID STRUCTURE
+  const isValidStructure = (text) => {
+    if (!text || text.length < 100) return false;
+    if (text.includes('technical difficulties')) return false;
+    if (text.includes('error') && text.length < 200) return false;
+    if (text.includes('rephrase your question')) return false;
+    
+    // Check for structure-like content
+    const hasStructureKeywords = text.includes('Folder') || 
+                                 text.includes('Directory') || 
+                                 text.includes('/') ||
+                                 text.includes('Structure') ||
+                                 text.includes('Organization');
+    
+    return hasStructureKeywords;
+  };
+
+  // ✅ GENERATE FALLBACK STRUCTURE
+  const generateFallbackStructure = () => {
+    return `## Data Center File Organization Structure
+
+### 1. Site-Based Organization
+📁 LHR86/
+  📁 Operations/
+    📁 Maintenance_Logs/
+    📁 Incident_Reports/
+    📁 Daily_Checklists/
+  📁 Infrastructure/
+    📁 Network_Diagrams/
+    📁 Server_Inventory/
+    📁 Rack_Layouts/
+  📁 Safety/
+    📁 RAMS_Documents/
+    📁 Emergency_Procedures/
+    📁 Safety_Checklists/
+  📁 Compliance/
+    📁 Audit_Reports/
+    📁 Certifications/
+    📁 Regulatory_Documents/
+  📁 Vendors/
+    📁 Contracts/
+    📁 Service_Agreements/
+    📁 Contact_Information/
+
+### 2. Equipment Documentation
+📁 Equipment/
+  📁 Generators/
+    📄 Maintenance_Schedules.xlsx
+    📄 Service_Manuals.pdf
+  📁 UPS_Systems/
+    📄 Configuration_Files.json
+    📄 Monitoring_Logs.csv
+  📁 Cooling_Systems/
+    📄 Performance_Data.xlsx
+    📄 Maintenance_Records.pdf
+
+### 3. Procedures
+📁 Procedures/
+  📁 Standard_Operating_Procedures/
+  📁 Emergency_Response/
+  📁 Maintenance_Procedures/
+  📁 Safety_Protocols/`;
+  };
+
   // ✅ PARSE STRUCTURE TEXT INTO TREE FORMAT
   const parseStructureToTree = (structureText) => {
     if (!structureText) return [];
@@ -147,10 +212,10 @@ const InterviewSystem = () => {
       
       // Determine if it's a folder (ends with / or contains subfolders)
       const isFolder = cleanLine.endsWith('/') || cleanLine.includes('Folder') || 
-                      indent === 0 || cleanLine.match(/^[A-Z]/);
+                      cleanLine.includes('📁') || indent === 0 || cleanLine.match(/^[A-Z]/);
       
       tree.push({
-        name: cleanLine.replace('/', '').replace('-', '').trim(),
+        name: cleanLine.replace('/', '').replace('-', '').replace('📁', '').replace('📄', '').trim(),
         level: Math.floor(indent / 2),
         isFolder: isFolder,
         id: Math.random().toString(36).substr(2, 9)
@@ -337,8 +402,18 @@ const InterviewSystem = () => {
 
       // ✅ SET INITIAL STRUCTURE WHEN INTERVIEW COMPLETES
       if (isInterviewComplete) {
-        console.log('🎉 Interview completed! Setting initial structure...');
-        setCurrentStructure(aiResponse);
+        console.log('🎉 Interview completed! Checking structure validity...');
+        
+        if (isValidStructure(aiResponse)) {
+          console.log('✅ Valid structure received');
+          setCurrentStructure(aiResponse);
+          setStructureError('');
+        } else {
+          console.log('❌ Invalid structure, using fallback');
+          setCurrentStructure(generateFallbackStructure());
+          setStructureError('AI generated an invalid structure. Using fallback structure based on common data center practices.');
+        }
+        
         setStructureUpdateTrigger(prev => prev + 1);
         
         setTimeout(() => {
@@ -422,7 +497,7 @@ const InterviewSystem = () => {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          message: `Please regenerate the folder structure based on this feedback: ${feedbackText}`,
+          message: `Based on the current folder structure and this feedback: "${feedbackText}", please generate an improved data center file organization structure. Include specific folders for operations, infrastructure, safety, compliance, and equipment documentation.`,
           interviewMode: true,
           topic: currentTopic,
           engineerId: engineerAlias.trim()
@@ -436,10 +511,20 @@ const InterviewSystem = () => {
       const data = await response.json();
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
       
-      console.log('✅ New structure generated:', responseBody.response);
+      console.log('✅ New structure response:', responseBody.response);
       
-      // ✅ UPDATE CURRENT STRUCTURE AND TRIGGER SCROLL
-      setCurrentStructure(responseBody.response);
+      // ✅ VALIDATE AND UPDATE STRUCTURE
+      if (isValidStructure(responseBody.response)) {
+        console.log('✅ Valid improved structure received');
+        setCurrentStructure(responseBody.response);
+        setStructureError('');
+      } else {
+        console.log('❌ Invalid improved structure, using enhanced fallback');
+        const enhancedFallback = generateFallbackStructure() + `\n\n### Feedback Applied: ${feedbackText}\n📁 Custom_Requirements/\n  📄 User_Feedback.txt\n  📄 Implementation_Notes.md`;
+        setCurrentStructure(enhancedFallback);
+        setStructureError('AI had trouble generating the improved structure. Using enhanced fallback with your feedback noted.');
+      }
+      
       setStructureUpdateTrigger(prev => prev + 1);
 
       // Add confirmation to feedback chat
@@ -454,9 +539,16 @@ const InterviewSystem = () => {
       
     } catch (error) {
       console.error('Error generating improved structure:', error);
+      
+      // Use fallback with feedback
+      const fallbackWithFeedback = generateFallbackStructure() + `\n\n### Your Feedback: ${feedbackText}\n📁 Feedback_Applied/\n  📄 User_Requirements.txt`;
+      setCurrentStructure(fallbackWithFeedback);
+      setStructureError('There was an error generating the improved structure. Using fallback structure with your feedback incorporated.');
+      setStructureUpdateTrigger(prev => prev + 1);
+      
       const errorMessage = {
         id: Date.now() + 3,
-        text: '❌ Sorry, there was an error generating the improved structure. Please try again.',
+        text: '⚠️ I had some technical difficulties generating the improved structure, but I\'ve created a fallback structure that incorporates your feedback. You can see it above!',
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString()
       };
@@ -552,6 +644,7 @@ const InterviewSystem = () => {
     setCurrentQuestion('');
     setCurrentStructure('');
     setStructureUpdateTrigger(0);
+    setStructureError('');
   };
 
   if (interviewState === 'start') {
@@ -705,6 +798,14 @@ const InterviewSystem = () => {
           <p>Based on your responses, here's the recommended organization</p>
         </div>
 
+        {/* ✅ STRUCTURE ERROR WARNING */}
+        {structureError && (
+          <div className="structure-error-warning">
+            <h4>⚠️ Structure Generation Notice</h4>
+            <p>{structureError}</p>
+          </div>
+        )}
+
         {/* ✅ STRUCTURE DISPLAY USING CURRENT STRUCTURE STATE */}
         <div className="structure-display" ref={structureDisplayRef}>
           <div className="structure-content">
@@ -728,7 +829,7 @@ const InterviewSystem = () => {
                 </button>
               </div>
             </div>
-            <TreeStructure structureText={currentStructure || 'Loading structure...'} />
+            <TreeStructure structureText={currentStructure || generateFallbackStructure()} />
           </div>
         </div>
 
@@ -737,6 +838,7 @@ const InterviewSystem = () => {
           <strong>🔧 DEBUG:</strong><br/>
           Current Structure Length: {currentStructure?.length || 0}<br/>
           Structure Update Trigger: {structureUpdateTrigger}<br/>
+          Structure Valid: {isValidStructure(currentStructure) ? '✅ Yes' : '❌ No'}<br/>
           Structure Preview: {currentStructure?.substring(0, 100) || 'No structure'}...
         </div>
 
