@@ -1,4 +1,4 @@
-import React, { useState, useEffect} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './InterviewSystem.css';
 
 const InterviewSystem = () => {
@@ -14,13 +14,16 @@ const InterviewSystem = () => {
   const [interviewActive, setInterviewActive] = useState(false);
   const [interviewComplete, setInterviewComplete] = useState(false);
   
-  // ✅ NEW STATES FOR PROPER TRACKING
+  // ✅ ENGINEER TRACKING STATES
   const [engineerAlias, setEngineerAlias] = useState('');
   const [conversationId, setConversationId] = useState('');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState('');
 
-  // Updated API endpoint to use AmazonQKnowledgeAPI
+  // ✅ AUTO-SCROLL REF
+  const messagesEndRef = useRef(null);
+
+  // Updated API endpoint
   const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
 
   const interviewTopics = [
@@ -49,6 +52,16 @@ const InterviewSystem = () => {
       icon: '📋'
     }
   ];
+
+  // ✅ AUTO-SCROLL WHEN MESSAGES CHANGE
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
+  }, [messages]);
 
   // ✅ GENERATE UNIQUE CONVERSATION ID
   const generateConversationId = () => {
@@ -125,7 +138,7 @@ const InterviewSystem = () => {
 
       // IMPORTANT: Update all the states to switch to interview mode
       setCurrentTopic(topicId);
-      setInterviewState('active');  // ← ADD THIS LINE!
+      setInterviewState('active');
       setInterviewActive(true);
       setInterviewComplete(false);
 
@@ -140,116 +153,115 @@ const InterviewSystem = () => {
   };
 
   const sendResponse = async () => {
-  if (!inputText.trim()) return;
+    if (!inputText.trim()) return;
 
-  try {
-    setLoading(true);
-    
-    // Add user message immediately
-    const userMessage = {
-      id: Date.now(),
-      text: inputText,
-      sender: 'user',
-      timestamp: new Date().toLocaleTimeString()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    const currentInput = inputText;
-    setInputText('');
+    try {
+      setLoading(true);
+      
+      // Add user message immediately
+      const userMessage = {
+        id: Date.now(),
+        text: inputText,
+        sender: 'user',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      
+      setMessages(prev => [...prev, userMessage]);
+      const currentInput = inputText;
+      setInputText('');
 
-    console.log('Sending response:', currentInput);
-    console.log('Current question index:', currentQuestionIndex);
-    console.log('Previous question:', currentQuestion);
+      console.log('Sending response:', currentInput);
+      console.log('Current question index:', currentQuestionIndex);
+      console.log('Previous question:', currentQuestion);
 
-    const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: currentInput,
-        interviewMode: true,
-        questionIndex: currentQuestionIndex,
-        conversationId: conversationId,
-        previousQuestion: currentQuestion,
-        engineerId: engineerAlias.trim()
-      })
-    });
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: currentInput,
+          interviewMode: true,
+          questionIndex: currentQuestionIndex,        // ✅ PROPER QUESTION INDEX
+          conversationId: conversationId,            // ✅ CONVERSATION ID
+          previousQuestion: currentQuestion,         // ✅ PREVIOUS QUESTION
+          engineerId: engineerAlias.trim()          // ✅ ENGINEER ALIAS
+        })
+      });
 
-    console.log('Response status:', response.status);
+      console.log('Response status:', response.status);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Full response data:', data);
+
+      // Extract response from your Lambda format
+      let aiResponse;
+      let isInterviewComplete = false;
+      
+      if (data.statusCode === 200) {
+        const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+        aiResponse = responseBody.response;
+        
+        // Check for interview completion
+        isInterviewComplete = responseBody.interviewComplete === true;
+        
+        console.log('Interview complete status:', isInterviewComplete);
+        console.log('AI Response length:', aiResponse?.length);
+        
+        // ✅ UPDATE QUESTION TRACKING
+        setCurrentQuestionIndex(responseBody.questionIndex || currentQuestionIndex + 1);
+        setCurrentQuestion(responseBody.currentQuestion || aiResponse);
+        
+      } else {
+        aiResponse = 'Sorry, there was an error processing your response. Please try again.';
+      }
+
+      console.log('Extracted AI response:', aiResponse);
+      console.log('Is interview complete?', isInterviewComplete);
+
+      // ✅ ADD AI RESPONSE WITH PROPER STRUCTURE FLAG
+      const aiMessage = {
+        id: Date.now() + 1,
+        text: aiResponse,
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString(),
+        isStructure: isInterviewComplete // ✅ MARK AS STRUCTURE IF COMPLETE
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+
+      // ✅ HANDLE INTERVIEW COMPLETION
+      if (isInterviewComplete) {
+        console.log('🎉 Interview completed! Switching to feedback state...');
+        console.log('Structure message added:', aiMessage);
+        
+        // Small delay to ensure state updates
+        setTimeout(() => {
+          setInterviewComplete(true);
+          setInterviewActive(false);
+          setInterviewState('feedback');
+        }, 100);
+      }
+
+    } catch (error) {
+      console.error('Error sending response:', error);
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        text: 'Sorry, there was an error processing your response. Please try again.',
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
+      }]);
+    } finally {
+      setLoading(false);
     }
-
-    const data = await response.json();
-    console.log('Full response data:', data);
-
-    // Extract response from your Lambda format
-    let aiResponse;
-    let isInterviewComplete = false;
-    
-    if (data.statusCode === 200) {
-      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
-      aiResponse = responseBody.response;
-      
-      // Check for interview completion
-      isInterviewComplete = responseBody.interviewComplete === true;
-      
-      console.log('Interview complete status:', isInterviewComplete);
-      console.log('AI Response length:', aiResponse?.length);
-      
-      // Update question tracking
-      setCurrentQuestionIndex(responseBody.questionIndex || currentQuestionIndex + 1);
-      setCurrentQuestion(responseBody.currentQuestion || aiResponse);
-      
-    } else {
-      aiResponse = 'Sorry, there was an error processing your response. Please try again.';
-    }
-
-    console.log('Extracted AI response:', aiResponse);
-    console.log('Is interview complete?', isInterviewComplete);
-
-    // ✅ ADD AI RESPONSE WITH PROPER STRUCTURE FLAG
-    const aiMessage = {
-      id: Date.now() + 1,
-      text: aiResponse,
-      sender: 'ai',
-      timestamp: new Date().toLocaleTimeString(),
-      isStructure: isInterviewComplete // ✅ MARK AS STRUCTURE IF COMPLETE
-    };
-    
-    setMessages(prev => [...prev, aiMessage]);
-
-    // ✅ HANDLE INTERVIEW COMPLETION
-    if (isInterviewComplete) {
-      console.log('🎉 Interview completed! Switching to feedback state...');
-      console.log('Structure message added:', aiMessage);
-      
-      // Small delay to ensure state updates
-      setTimeout(() => {
-        setInterviewComplete(true);
-        setInterviewActive(false);
-        setInterviewState('feedback');
-      }, 100);
-    }
-
-  } catch (error) {
-    console.error('Error sending response:', error);
-    setMessages(prev => [...prev, {
-      id: Date.now() + 1,
-      text: 'Sorry, there was an error processing your response. Please try again.',
-      sender: 'ai',
-      timestamp: new Date().toLocaleTimeString()
-    }]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const generateFileStructure = async () => {
     try {
-      // Updated to use AmazonQKnowledgeAPI
       const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
         headers: { 
@@ -340,7 +352,6 @@ const InterviewSystem = () => {
 
   const generateImprovedStructure = async () => {
     try {
-      // Updated to use AmazonQKnowledgeAPI
       const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
         headers: { 
@@ -388,7 +399,6 @@ const InterviewSystem = () => {
 
   const saveFeedback = async (type, feedback) => {
     try {
-      // Updated to use AmazonQKnowledgeAPI
       await fetch(`${API_BASE_URL}/questions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -439,7 +449,7 @@ const InterviewSystem = () => {
           </div>
         </div>
 
-        {/* ✅ ADD ENGINEER ALIAS INPUT SECTION */}
+        {/* ✅ ENGINEER ALIAS INPUT SECTION */}
         <div className="engineer-info-section">
           <h3>👤 Engineer Information</h3>
           <div className="alias-input-container">
@@ -569,6 +579,11 @@ const InterviewSystem = () => {
   }
 
   if (interviewState === 'feedback') {
+    // ✅ DEBUG LOGGING
+    const structureMessages = messages.filter(msg => msg.isStructure);
+    console.log('🔍 DEBUG - All messages:', messages);
+    console.log('🔍 DEBUG - Structure messages found:', structureMessages);
+    
     return (
       <div className="interview-feedback">
         <div className="feedback-header">
@@ -576,14 +591,25 @@ const InterviewSystem = () => {
           <p>Based on your responses, here's the recommended organization</p>
         </div>
 
+        {/* ✅ IMPROVED STRUCTURE DISPLAY WITH FALLBACK */}
         <div className="structure-display">
-          {messages.filter(msg => msg.isStructure).map(msg => (
-            <div key={msg.id} className="structure-content">
-                {(msg.text || '').split('\n').map((line, i) => (
-                    <div key={i}>{line}</div>
-                ))}
+          {structureMessages.length > 0 ? (
+            structureMessages.map(msg => (
+              <div key={msg.id} className="structure-content">
+                <pre style={{whiteSpace: 'pre-wrap', fontFamily: 'inherit'}}>
+                  {msg.text}
+                </pre>
+              </div>
+            ))
+          ) : (
+            // ✅ FALLBACK: SHOW LAST AI MESSAGE IF NO STRUCTURE FOUND
+            <div className="structure-content">
+              <h4>📋 Generated Structure:</h4>
+              <pre style={{whiteSpace: 'pre-wrap', fontFamily: 'inherit'}}>
+                {messages.filter(msg => msg.sender === 'ai').pop()?.text || 'No structure generated yet.'}
+              </pre>
             </div>
-            ))}
+          )}
         </div>
 
         {!structureApproved && !showFeedbackInput && (
@@ -668,7 +694,7 @@ const InterviewSystem = () => {
         <h3>🎤 {currentTopic}</h3>
         <div className="interview-controls">
           <span className="status">🟢 Active Interview</span>
-          <span className="engineer-info">👤 {engineerAlias}</span> {/* ✅ SHOW ENGINEER ALIAS */}
+          <span className="engineer-info">👤 {engineerAlias}</span>
           <button onClick={resetInterview} className="exit-btn">❌ Exit</button>
         </div>
       </div>
@@ -699,6 +725,9 @@ const InterviewSystem = () => {
             </div>
           </div>
         )}
+        
+        {/* ✅ INVISIBLE ELEMENT TO SCROLL TO */}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="interview-input">
