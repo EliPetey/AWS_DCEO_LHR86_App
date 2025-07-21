@@ -13,6 +13,12 @@ const InterviewSystem = () => {
   const [error, setError] = useState('');
   const [interviewActive, setInterviewActive] = useState(false);
   const [interviewComplete, setInterviewComplete] = useState(false);
+  
+  // ✅ NEW STATES FOR PROPER TRACKING
+  const [engineerAlias, setEngineerAlias] = useState('');
+  const [conversationId, setConversationId] = useState('');
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState('');
 
   // Updated API endpoint to use AmazonQKnowledgeAPI
   const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
@@ -44,151 +50,183 @@ const InterviewSystem = () => {
     }
   ];
 
+  // ✅ GENERATE UNIQUE CONVERSATION ID
+  const generateConversationId = () => {
+    return 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  };
+
   const startInterview = async (topicId) => {
-  console.log('🎯 BUTTON CLICKED! Topic:', topicId);
-  console.log('Current interview state:', interviewState);
-  
-  try {
-    setLoading(true);
-    setError('');
-    
-    console.log('Starting interview for topic:', topicId);
-    
-    const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: `I want to start an interview about ${topicId}. Please ask me the first question about file organization.`,
-        interviewMode: true,
-        questionIndex: 0
-      })
-    });
-
-    console.log('Response status:', response.status);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // ✅ VALIDATE ENGINEER ALIAS FIRST
+    if (!engineerAlias.trim()) {
+      setError('Please enter your engineer alias before starting the interview.');
+      return;
     }
 
-    const data = await response.json();
-    console.log('Full response data:', data);
-
-    // Extract response from your Lambda format
-    let aiResponse;
-    if (data.statusCode === 200) {
-      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
-      aiResponse = responseBody.response;
-    } else {
-      aiResponse = 'Error starting interview. Please try again.';
-    }
-
-    console.log('Extracted AI response:', aiResponse);
-
-    // Clear previous messages and add the first question
-    setMessages([{
-      id: 1,
-      text: aiResponse,
-      sender: 'ai',
-      timestamp: new Date().toLocaleTimeString()
-    }]);
-
-    // IMPORTANT: Update all the states to switch to interview mode
-    setCurrentTopic(topicId);
-    setInterviewState('active');  // ← ADD THIS LINE!
-    setInterviewActive(true);
-    setInterviewComplete(false);
-
-    console.log('✅ Interview started successfully!');
-
-  } catch (error) {
-    console.error('Error starting interview:', error);
-    setError('Sorry, there was an error starting the interview. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
-
- const sendResponse = async () => {
-  if (!inputText.trim()) return;
-
-  try {
-    setLoading(true);
+    console.log('🎯 BUTTON CLICKED! Topic:', topicId);
+    console.log('Engineer Alias:', engineerAlias);
+    console.log('Current interview state:', interviewState);
     
-    // Add user message immediately
-    const userMessage = {
-      id: Date.now(),
-      text: inputText,
-      sender: 'user',
-      timestamp: new Date().toLocaleTimeString()
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    const currentInput = inputText;
-    setInputText('');
-
-    console.log('Sending response:', currentInput);
-
-    const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message: currentInput,  // ← Changed from inputText
-        interviewMode: true,
-        questionIndex: messages.filter(msg => msg.sender === 'user').length  // ← Track question number
-      })
-    });
-
-    console.log('Response status:', response.status);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log('Full response data:', data);
-
-    // Extract response from your Lambda format
-    let aiResponse;
-    if (data.statusCode === 200) {
-      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
-      aiResponse = responseBody.response;
+    try {
+      setLoading(true);
+      setError('');
       
-      // Check if interview is complete
-      if (responseBody.interviewComplete) {
-        setInterviewComplete(true);
-        setInterviewActive(false);
-        setInterviewState('feedback');
+      // ✅ GENERATE NEW CONVERSATION ID
+      const newConversationId = generateConversationId();
+      setConversationId(newConversationId);
+      setCurrentQuestionIndex(0);
+      
+      console.log('Starting interview for topic:', topicId);
+      console.log('Conversation ID:', newConversationId);
+      
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: '', // ✅ EMPTY FOR FIRST REQUEST
+          interviewMode: true,
+          questionIndex: 0,
+          conversationId: newConversationId, // ✅ ADD CONVERSATION ID
+          engineerId: engineerAlias.trim()   // ✅ ADD ENGINEER ALIAS
+        })
+      });
+
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    } else {
-      aiResponse = 'Sorry, there was an error processing your response. Please try again.';
+
+      const data = await response.json();
+      console.log('Full response data:', data);
+
+      // Extract response from your Lambda format
+      let aiResponse;
+      if (data.statusCode === 200) {
+        const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+        aiResponse = responseBody.response;
+        
+        // ✅ STORE CURRENT QUESTION FOR NEXT REQUEST
+        setCurrentQuestion(responseBody.currentQuestion || aiResponse);
+      } else {
+        aiResponse = 'Error starting interview. Please try again.';
+      }
+
+      console.log('Extracted AI response:', aiResponse);
+
+      // Clear previous messages and add the first question
+      setMessages([{
+        id: 1,
+        text: aiResponse,
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
+      }]);
+
+      // IMPORTANT: Update all the states to switch to interview mode
+      setCurrentTopic(topicId);
+      setInterviewState('active');  // ← ADD THIS LINE!
+      setInterviewActive(true);
+      setInterviewComplete(false);
+
+      console.log('✅ Interview started successfully!');
+
+    } catch (error) {
+      console.error('Error starting interview:', error);
+      setError('Sorry, there was an error starting the interview. Please try again.');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    console.log('Extracted AI response:', aiResponse);
+  const sendResponse = async () => {
+    if (!inputText.trim()) return;
 
-    // Add AI response
-    setMessages(prev => [...prev, {
-      id: Date.now() + 1,
-      text: aiResponse,
-      sender: 'ai',
-      timestamp: new Date().toLocaleTimeString()
-    }]);
+    try {
+      setLoading(true);
+      
+      // Add user message immediately
+      const userMessage = {
+        id: Date.now(),
+        text: inputText,
+        sender: 'user',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      
+      setMessages(prev => [...prev, userMessage]);
+      const currentInput = inputText;
+      setInputText('');
 
-  } catch (error) {
-    console.error('Error sending response:', error);
-    setMessages(prev => [...prev, {
-      id: Date.now() + 1,
-      text: 'Sorry, there was an error processing your response. Please try again.',
-      sender: 'ai',
-      timestamp: new Date().toLocaleTimeString()
-    }]);
-  } finally {
-    setLoading(false);
-  }
-};
+      console.log('Sending response:', currentInput);
+      console.log('Current question index:', currentQuestionIndex);
+      console.log('Previous question:', currentQuestion);
+
+      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: currentInput,
+          interviewMode: true,
+          questionIndex: currentQuestionIndex,        // ✅ PROPER QUESTION INDEX
+          conversationId: conversationId,            // ✅ CONVERSATION ID
+          previousQuestion: currentQuestion,         // ✅ PREVIOUS QUESTION
+          engineerId: engineerAlias.trim()          // ✅ ENGINEER ALIAS
+        })
+      });
+
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Full response data:', data);
+
+      // Extract response from your Lambda format
+      let aiResponse;
+      if (data.statusCode === 200) {
+        const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+        aiResponse = responseBody.response;
+        
+        // ✅ UPDATE QUESTION TRACKING
+        setCurrentQuestionIndex(responseBody.questionIndex || currentQuestionIndex + 1);
+        setCurrentQuestion(responseBody.currentQuestion || aiResponse);
+        
+        // Check if interview is complete
+        if (responseBody.interviewComplete) {
+          setInterviewComplete(true);
+          setInterviewActive(false);
+          setInterviewState('feedback');
+        }
+      } else {
+        aiResponse = 'Sorry, there was an error processing your response. Please try again.';
+      }
+
+      console.log('Extracted AI response:', aiResponse);
+
+      // Add AI response
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        text: aiResponse,
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
+      }]);
+
+    } catch (error) {
+      console.error('Error sending response:', error);
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        text: 'Sorry, there was an error processing your response. Please try again.',
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
+      }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const generateFileStructure = async () => {
     try {
@@ -203,7 +241,7 @@ const InterviewSystem = () => {
           inputText: 'GENERATE_FILE_STRUCTURE',
           interviewMode: true,
           topic: currentTopic,
-          engineerId: 'current-engineer'
+          engineerId: engineerAlias.trim()
         })
       });
 
@@ -294,7 +332,7 @@ const InterviewSystem = () => {
           inputText: 'REGENERATE_STRUCTURE_WITH_FEEDBACK',
           interviewMode: true,
           topic: currentTopic,
-          engineerId: 'current-engineer'
+          engineerId: engineerAlias.trim()
         })
       });
 
@@ -339,7 +377,7 @@ const InterviewSystem = () => {
           inputText: `FEEDBACK:${type}:${feedback}`,
           interviewMode: true,
           topic: currentTopic,
-          engineerId: 'current-engineer'
+          engineerId: engineerAlias.trim()
         })
       });
     } catch (error) {
@@ -362,6 +400,11 @@ const InterviewSystem = () => {
     setShowFeedbackInput(false);
     setFeedbackText('');
     setStructureApproved(false);
+    // ✅ RESET NEW STATES
+    setConversationId('');
+    setCurrentQuestionIndex(0);
+    setCurrentQuestion('');
+    // Don't reset engineerAlias - keep it for next interview
   };
 
   if (interviewState === 'start') {
@@ -377,6 +420,32 @@ const InterviewSystem = () => {
           </div>
         </div>
 
+        {/* ✅ ADD ENGINEER ALIAS INPUT SECTION */}
+        <div className="engineer-info-section">
+          <h3>👤 Engineer Information</h3>
+          <div className="alias-input-container">
+            <label htmlFor="engineerAlias">Your Amazon Alias:</label>
+            <input
+              id="engineerAlias"
+              type="text"
+              value={engineerAlias}
+              onChange={(e) => setEngineerAlias(e.target.value)}
+              placeholder="e.g., john.smith"
+              className="alias-input"
+              maxLength={50}
+            />
+            <div className="alias-help">
+              💡 This helps us track responses and build consensus across engineers
+            </div>
+          </div>
+          
+          {error && (
+            <div className="error-message">
+              ⚠️ {error}
+            </div>
+          )}
+        </div>
+
         <div className="interview-topics">
           <h3>Choose a topic to discuss:</h3>
           <div className="topics-grid">
@@ -386,8 +455,9 @@ const InterviewSystem = () => {
                 <h4>{topic.title}</h4>
                 <p>{topic.description}</p>
                 <button 
-                  className="start-topic-btn"
+                  className={`start-topic-btn ${!engineerAlias.trim() ? 'disabled' : ''}`}
                   onClick={() => startInterview(topic.id)}
+                  disabled={!engineerAlias.trim()}
                 >
                   Start Discussion
                 </button>
@@ -579,6 +649,7 @@ const InterviewSystem = () => {
         <h3>🎤 {currentTopic}</h3>
         <div className="interview-controls">
           <span className="status">🟢 Active Interview</span>
+          <span className="engineer-info">👤 {engineerAlias}</span> {/* ✅ SHOW ENGINEER ALIAS */}
           <button onClick={resetInterview} className="exit-btn">❌ Exit</button>
         </div>
       </div>
