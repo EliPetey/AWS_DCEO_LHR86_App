@@ -23,12 +23,20 @@ const InterviewSystem = () => {
   // ✅ AUTO-SCROLL REFS
   const messagesEndRef = useRef(null);
   const feedbackMessagesEndRef = useRef(null);
-  const structureDisplayRef = useRef(null); // ✅ NEW REF FOR STRUCTURE SCROLLING
+  const structureDisplayRef = useRef(null);
+
+  // ✅ INPUT REFS FOR AUTO-FOCUS
+  const mainInputRef = useRef(null);
+  const feedbackInputRef = useRef(null);
 
   // ✅ FEEDBACK CHAT STATES
   const [feedbackMessages, setFeedbackMessages] = useState([]);
   const [feedbackInputText, setFeedbackInputText] = useState('');
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+
+  // ✅ CURRENT STRUCTURE STATE - SEPARATE FROM MESSAGES
+  const [currentStructure, setCurrentStructure] = useState('');
+  const [structureUpdateTrigger, setStructureUpdateTrigger] = useState(0);
 
   // Updated API endpoint
   const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
@@ -80,17 +88,44 @@ const InterviewSystem = () => {
     }
   }, [feedbackMessages]);
 
-  // ✅ SCROLL TO TOP OF STRUCTURE WHEN UPDATED
+  // ✅ SCROLL TO STRUCTURE WHEN UPDATED
   useEffect(() => {
-    if (structureDisplayRef.current && interviewState === 'feedback') {
+    if (structureDisplayRef.current && structureUpdateTrigger > 0) {
+      console.log('🔄 Structure updated, scrolling to display...');
       setTimeout(() => {
         structureDisplayRef.current.scrollIntoView({ 
           behavior: 'smooth',
           block: 'start'
         });
-      }, 500);
+        
+        // Also scroll the tree container to top
+        setTimeout(() => {
+          const treeContainer = document.querySelector('.tree-structure-container');
+          if (treeContainer) {
+            treeContainer.scrollTop = 0;
+          }
+        }, 500);
+      }, 300);
     }
-  }, [messages.filter(msg => msg.isStructure).length]); // Triggers when structure messages change
+  }, [structureUpdateTrigger]);
+
+  // ✅ AUTO-FOCUS MAIN INPUT AFTER AI RESPONDS
+  useEffect(() => {
+    if (interviewState === 'active' && !loading && mainInputRef.current) {
+      setTimeout(() => {
+        mainInputRef.current.focus();
+      }, 100);
+    }
+  }, [messages, loading, interviewState]);
+
+  // ✅ AUTO-FOCUS FEEDBACK INPUT AFTER AI RESPONDS
+  useEffect(() => {
+    if (showFeedbackInput && !feedbackLoading && feedbackInputRef.current) {
+      setTimeout(() => {
+        feedbackInputRef.current.focus();
+      }, 100);
+    }
+  }, [feedbackMessages, feedbackLoading, showFeedbackInput]);
 
   // ✅ PARSE STRUCTURE TEXT INTO TREE FORMAT
   const parseStructureToTree = (structureText) => {
@@ -132,20 +167,27 @@ const InterviewSystem = () => {
     return (
       <div className="tree-structure-container">
         <div className="tree-structure">
-          {tree.map((item, index) => (
-            <div 
-              key={item.id} 
-              className="tree-item"
-              style={{ paddingLeft: `${item.level * 20}px` }}
-            >
-              <span className="tree-icon">
-                {item.isFolder ? '📁' : '📄'}
-              </span>
-              <span className={`tree-name ${item.isFolder ? 'folder' : 'file'}`}>
-                {item.name}
-              </span>
+          {tree.length > 0 ? (
+            tree.map((item, index) => (
+              <div 
+                key={item.id} 
+                className="tree-item"
+                style={{ paddingLeft: `${item.level * 20}px` }}
+              >
+                <span className="tree-icon">
+                  {item.isFolder ? '📁' : '📄'}
+                </span>
+                <span className={`tree-name ${item.isFolder ? 'folder' : 'file'}`}>
+                  {item.name}
+                </span>
+              </div>
+            ))
+          ) : (
+            <div className="tree-item">
+              <span className="tree-icon">📄</span>
+              <span className="tree-name">No structure available</span>
             </div>
-          ))}
+          )}
         </div>
       </div>
     );
@@ -293,8 +335,12 @@ const InterviewSystem = () => {
       
       setMessages(prev => [...prev, aiMessage]);
 
+      // ✅ SET INITIAL STRUCTURE WHEN INTERVIEW COMPLETES
       if (isInterviewComplete) {
-        console.log('🎉 Interview completed! Switching to feedback state...');
+        console.log('🎉 Interview completed! Setting initial structure...');
+        setCurrentStructure(aiResponse);
+        setStructureUpdateTrigger(prev => prev + 1);
+        
         setTimeout(() => {
           setInterviewComplete(true);
           setInterviewActive(false);
@@ -367,6 +413,8 @@ const InterviewSystem = () => {
 
   const generateImprovedStructure = async (feedbackText) => {
     try {
+      console.log('🔄 Generating improved structure with feedback:', feedbackText);
+      
       const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
         headers: { 
@@ -388,20 +436,11 @@ const InterviewSystem = () => {
       const data = await response.json();
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
       
-      // ✅ UPDATE THE STRUCTURE IN MESSAGES AND SCROLL TO IT
-      const improvedStructureMessage = {
-        id: Date.now() + 3,
-        text: responseBody.response,
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString(),
-        isStructure: true
-      };
-
-      setMessages(prev => {
-        // Replace the last structure message with the new one
-        const filtered = prev.filter(msg => !msg.isStructure);
-        return [...filtered, improvedStructureMessage];
-      });
+      console.log('✅ New structure generated:', responseBody.response);
+      
+      // ✅ UPDATE CURRENT STRUCTURE AND TRIGGER SCROLL
+      setCurrentStructure(responseBody.response);
+      setStructureUpdateTrigger(prev => prev + 1);
 
       // Add confirmation to feedback chat
       const confirmationMessage = {
@@ -474,6 +513,30 @@ const InterviewSystem = () => {
     }
   };
 
+  // ✅ MANUAL SCROLL TO TOP FUNCTION
+  const scrollToStructureTop = () => {
+    console.log('📜 Manual scroll to structure top');
+    
+    // First scroll to the structure display
+    if (structureDisplayRef.current) {
+      structureDisplayRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+    
+    // Then scroll the tree container to top
+    setTimeout(() => {
+      const treeContainer = document.querySelector('.tree-structure-container');
+      if (treeContainer) {
+        treeContainer.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+    }, 500);
+  };
+
   const resetInterview = () => {
     setInterviewState('start');
     setMessages([]);
@@ -487,6 +550,8 @@ const InterviewSystem = () => {
     setConversationId('');
     setCurrentQuestionIndex(0);
     setCurrentQuestion('');
+    setCurrentStructure('');
+    setStructureUpdateTrigger(0);
   };
 
   if (interviewState === 'start') {
@@ -631,7 +696,7 @@ const InterviewSystem = () => {
   }
 
   if (interviewState === 'feedback') {
-    const structureMessages = messages.filter(msg => msg.isStructure);
+    console.log('🔍 Feedback screen - Current structure:', currentStructure);
     
     return (
       <div className="interview-feedback">
@@ -640,40 +705,39 @@ const InterviewSystem = () => {
           <p>Based on your responses, here's the recommended organization</p>
         </div>
 
-        {/* ✅ SCROLLABLE STRUCTURE DISPLAY WITH REF */}
+        {/* ✅ STRUCTURE DISPLAY USING CURRENT STRUCTURE STATE */}
         <div className="structure-display" ref={structureDisplayRef}>
-          {structureMessages.length > 0 ? (
-            structureMessages.map(msg => (
-              <div key={msg.id} className="structure-content">
-                <div className="structure-header">
-                  <h4>📋 Recommended Folder Structure</h4>
-                  <div className="structure-actions">
-                    <button 
-                      className="scroll-structure-btn"
-                      onClick={() => {
-                        const treeContainer = document.querySelector('.tree-structure-container');
-                        if (treeContainer) {
-                          treeContainer.scrollTop = 0;
-                        }
-                      }}
-                    >
-                      ⬆️ Scroll to Top
-                    </button>
-                  </div>
-                </div>
-                <TreeStructure structureText={msg.text} />
+          <div className="structure-content">
+            <div className="structure-header">
+              <h4>📋 Recommended Folder Structure</h4>
+              <div className="structure-actions">
+                <button 
+                  className="scroll-structure-btn"
+                  onClick={scrollToStructureTop}
+                >
+                  ⬆️ Scroll to Top
+                </button>
+                <button 
+                  className="refresh-structure-btn"
+                  onClick={() => {
+                    console.log('🔄 Manual refresh structure');
+                    setStructureUpdateTrigger(prev => prev + 1);
+                  }}
+                >
+                  🔄 Refresh
+                </button>
               </div>
-            ))
-          ) : (
-            <div className="structure-content">
-              <div className="structure-header">
-                <h4>📋 Generated Structure:</h4>
-              </div>
-              <TreeStructure 
-                structureText={messages.filter(msg => msg.sender === 'ai').pop()?.text || 'No structure generated yet.'} 
-              />
             </div>
-          )}
+            <TreeStructure structureText={currentStructure || 'Loading structure...'} />
+          </div>
+        </div>
+
+        {/* ✅ DEBUG INFO */}
+        <div className="debug-info" style={{background: '#f0f0f0', padding: '10px', margin: '10px 0', fontSize: '12px', borderRadius: '4px'}}>
+          <strong>🔧 DEBUG:</strong><br/>
+          Current Structure Length: {currentStructure?.length || 0}<br/>
+          Structure Update Trigger: {structureUpdateTrigger}<br/>
+          Structure Preview: {currentStructure?.substring(0, 100) || 'No structure'}...
         </div>
 
         {!structureApproved && !showFeedbackInput && (
@@ -698,7 +762,7 @@ const InterviewSystem = () => {
           </div>
         )}
 
-        {/* ✅ FEEDBACK CHAT INTERFACE WITH BETTER SCROLLING */}
+        {/* ✅ FEEDBACK CHAT INTERFACE */}
         {showFeedbackInput && (
           <div className="feedback-chat-section">
             <div className="feedback-chat-header">
@@ -747,6 +811,7 @@ const InterviewSystem = () => {
             <div className="feedback-input">
               <div className="input-container">
                 <textarea
+                  ref={feedbackInputRef}
                   value={feedbackInputText}
                   onChange={(e) => setFeedbackInputText(e.target.value)}
                   onKeyPress={handleFeedbackKeyPress}
@@ -835,6 +900,7 @@ const InterviewSystem = () => {
       <div className="interview-input">
         <div className="input-container">
           <textarea
+            ref={mainInputRef}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
