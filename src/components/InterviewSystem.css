@@ -907,3 +907,180 @@
   color: #6c757d;
   margin-top: 5px;
 }
+
+/* ✅ IMPROVED TREE STRUCTURE WITH SCROLLING */
+.tree-structure-container {
+  max-height: 500px; /* Set maximum height */
+  overflow-y: auto; /* Enable vertical scrolling */
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+.tree-structure {
+  padding: 20px;
+  font-family: 'Courier New', monospace;
+  min-height: 100px; /* Ensure minimum height */
+}
+
+.tree-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 0; /* Increased padding for better spacing */
+  transition: background-color 0.2s;
+  border-radius: 4px;
+  margin: 2px 0;
+}
+
+.tree-item:hover {
+  background-color: #e3f2fd;
+  padding-left: 8px;
+  margin-left: -8px;
+}
+
+.tree-icon {
+  margin-right: 10px;
+  font-size: 16px;
+  min-width: 20px; /* Ensure consistent spacing */
+}
+
+.tree-name {
+  font-size: 14px;
+  font-weight: 500;
+  word-break: break-word; /* Handle long names */
+}
+
+.tree-name.folder {
+  color: #1976d2;
+  font-weight: 600;
+}
+
+.tree-name.file {
+  color: #424242;
+}
+
+/* ✅ STRUCTURE HEADER WITH ACTIONS */
+.structure-header {
+  background: #e3f2fd;
+  padding: 15px 20px;
+  border-radius: 8px 8px 0 0;
+  border-bottom: 2px solid #1976d2;
+  margin-bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.structure-header h4 {
+  margin: 0;
+  color: #1565c0;
+}
+
+.structure-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.scroll-structure-btn {
+  background: #1976d2;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.scroll-structure-btn:hover {
+  background: #1565c0;
+}
+
+/* ✅ IMPROVED STRUCTURE CONTENT */
+.structure-content {
+  border: 2px solid #e3f2fd;
+  border-radius: 8px;
+  margin: 20px 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* ✅ BETTER FEEDBACK SECTION LAYOUT */
+.interview-feedback {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.feedback-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px;
+}
+
+.feedback-header h2 {
+  margin: 0 0 10px 0;
+  font-size: 28px;
+}
+
+.feedback-header p {
+  margin: 0;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+/* ✅ IMPROVED FEEDBACK MESSAGES SCROLLING */
+.feedback-messages {
+  max-height: 400px; /* Increased height */
+  overflow-y: auto;
+  padding: 20px;
+  scroll-behavior: smooth;
+  background: #fafafa;
+}
+
+/* ✅ RESPONSIVE DESIGN IMPROVEMENTS */
+@media (max-width: 768px) {
+  .tree-structure-container {
+    max-height: 300px;
+  }
+  
+  .structure-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  
+  .feedback-messages {
+    max-height: 250px;
+  }
+  
+  .tree-item {
+    font-size: 13px;
+  }
+}
+
+/* ✅ CUSTOM SCROLLBAR STYLING */
+.tree-structure-container::-webkit-scrollbar,
+.feedback-messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+.tree-structure-container::-webkit-scrollbar-track,
+.feedback-messages::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.tree-structure-container::-webkit-scrollbar-thumb,
+.feedback-messages::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.tree-structure-container::-webkit-scrollbar-thumb:hover,
+.feedback-messages::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}

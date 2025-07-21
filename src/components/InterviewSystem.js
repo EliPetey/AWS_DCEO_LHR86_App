@@ -20,9 +20,10 @@ const InterviewSystem = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState('');
 
-  // ✅ AUTO-SCROLL REF
+  // ✅ AUTO-SCROLL REFS
   const messagesEndRef = useRef(null);
   const feedbackMessagesEndRef = useRef(null);
+  const structureDisplayRef = useRef(null); // ✅ NEW REF FOR STRUCTURE SCROLLING
 
   // ✅ FEEDBACK CHAT STATES
   const [feedbackMessages, setFeedbackMessages] = useState([]);
@@ -79,6 +80,18 @@ const InterviewSystem = () => {
     }
   }, [feedbackMessages]);
 
+  // ✅ SCROLL TO TOP OF STRUCTURE WHEN UPDATED
+  useEffect(() => {
+    if (structureDisplayRef.current && interviewState === 'feedback') {
+      setTimeout(() => {
+        structureDisplayRef.current.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 500);
+    }
+  }, [messages.filter(msg => msg.isStructure).length]); // Triggers when structure messages change
+
   // ✅ PARSE STRUCTURE TEXT INTO TREE FORMAT
   const parseStructureToTree = (structureText) => {
     if (!structureText) return [];
@@ -112,26 +125,28 @@ const InterviewSystem = () => {
     return tree;
   };
 
-  // ✅ RENDER TREE STRUCTURE COMPONENT
+  // ✅ RENDER TREE STRUCTURE COMPONENT WITH BETTER SCROLLING
   const TreeStructure = ({ structureText }) => {
     const tree = parseStructureToTree(structureText);
     
     return (
-      <div className="tree-structure">
-        {tree.map((item, index) => (
-          <div 
-            key={item.id} 
-            className="tree-item"
-            style={{ paddingLeft: `${item.level * 20}px` }}
-          >
-            <span className="tree-icon">
-              {item.isFolder ? '📁' : '📄'}
-            </span>
-            <span className={`tree-name ${item.isFolder ? 'folder' : 'file'}`}>
-              {item.name}
-            </span>
-          </div>
-        ))}
+      <div className="tree-structure-container">
+        <div className="tree-structure">
+          {tree.map((item, index) => (
+            <div 
+              key={item.id} 
+              className="tree-item"
+              style={{ paddingLeft: `${item.level * 20}px` }}
+            >
+              <span className="tree-icon">
+                {item.isFolder ? '📁' : '📄'}
+              </span>
+              <span className={`tree-name ${item.isFolder ? 'folder' : 'file'}`}>
+                {item.name}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -373,7 +388,7 @@ const InterviewSystem = () => {
       const data = await response.json();
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
       
-      // Update the structure in messages
+      // ✅ UPDATE THE STRUCTURE IN MESSAGES AND SCROLL TO IT
       const improvedStructureMessage = {
         id: Date.now() + 3,
         text: responseBody.response,
@@ -391,7 +406,7 @@ const InterviewSystem = () => {
       // Add confirmation to feedback chat
       const confirmationMessage = {
         id: Date.now() + 4,
-        text: "✅ Perfect! I've updated the structure based on your feedback. You can see the new version above. What do you think of the changes?",
+        text: "✅ Perfect! I've updated the structure based on your feedback. You can see the new version above. The page will scroll to show you the updated structure!",
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString()
       };
@@ -625,13 +640,26 @@ const InterviewSystem = () => {
           <p>Based on your responses, here's the recommended organization</p>
         </div>
 
-        {/* ✅ BEAUTIFUL TREE STRUCTURE DISPLAY */}
-        <div className="structure-display">
+        {/* ✅ SCROLLABLE STRUCTURE DISPLAY WITH REF */}
+        <div className="structure-display" ref={structureDisplayRef}>
           {structureMessages.length > 0 ? (
             structureMessages.map(msg => (
               <div key={msg.id} className="structure-content">
                 <div className="structure-header">
                   <h4>📋 Recommended Folder Structure</h4>
+                  <div className="structure-actions">
+                    <button 
+                      className="scroll-structure-btn"
+                      onClick={() => {
+                        const treeContainer = document.querySelector('.tree-structure-container');
+                        if (treeContainer) {
+                          treeContainer.scrollTop = 0;
+                        }
+                      }}
+                    >
+                      ⬆️ Scroll to Top
+                    </button>
+                  </div>
                 </div>
                 <TreeStructure structureText={msg.text} />
               </div>
@@ -670,7 +698,7 @@ const InterviewSystem = () => {
           </div>
         )}
 
-        {/* ✅ FEEDBACK CHAT INTERFACE */}
+        {/* ✅ FEEDBACK CHAT INTERFACE WITH BETTER SCROLLING */}
         {showFeedbackInput && (
           <div className="feedback-chat-section">
             <div className="feedback-chat-header">
