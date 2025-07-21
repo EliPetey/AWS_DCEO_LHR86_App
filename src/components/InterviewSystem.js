@@ -22,6 +22,12 @@ const InterviewSystem = () => {
 
   // ✅ AUTO-SCROLL REF
   const messagesEndRef = useRef(null);
+  const feedbackMessagesEndRef = useRef(null);
+
+  // ✅ FEEDBACK CHAT STATES
+  const [feedbackMessages, setFeedbackMessages] = useState([]);
+  const [feedbackInputText, setFeedbackInputText] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   // Updated API endpoint
   const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
@@ -63,6 +69,73 @@ const InterviewSystem = () => {
     }
   }, [messages]);
 
+  // ✅ AUTO-SCROLL FOR FEEDBACK MESSAGES
+  useEffect(() => {
+    if (feedbackMessagesEndRef.current) {
+      feedbackMessagesEndRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'end'
+      });
+    }
+  }, [feedbackMessages]);
+
+  // ✅ PARSE STRUCTURE TEXT INTO TREE FORMAT
+  const parseStructureToTree = (structureText) => {
+    if (!structureText) return [];
+    
+    const lines = structureText.split('\n').filter(line => line.trim());
+    const tree = [];
+    
+    lines.forEach(line => {
+      // Skip headers and empty lines
+      if (line.includes('**') || line.includes('#') || line.trim() === '') return;
+      
+      // Count indentation level
+      const indent = line.search(/\S/);
+      const cleanLine = line.trim();
+      
+      // Skip lines that don't look like folder/file names
+      if (cleanLine.includes(':') && !cleanLine.includes('/')) return;
+      
+      // Determine if it's a folder (ends with / or contains subfolders)
+      const isFolder = cleanLine.endsWith('/') || cleanLine.includes('Folder') || 
+                      indent === 0 || cleanLine.match(/^[A-Z]/);
+      
+      tree.push({
+        name: cleanLine.replace('/', '').replace('-', '').trim(),
+        level: Math.floor(indent / 2),
+        isFolder: isFolder,
+        id: Math.random().toString(36).substr(2, 9)
+      });
+    });
+    
+    return tree;
+  };
+
+  // ✅ RENDER TREE STRUCTURE COMPONENT
+  const TreeStructure = ({ structureText }) => {
+    const tree = parseStructureToTree(structureText);
+    
+    return (
+      <div className="tree-structure">
+        {tree.map((item, index) => (
+          <div 
+            key={item.id} 
+            className="tree-item"
+            style={{ paddingLeft: `${item.level * 20}px` }}
+          >
+            <span className="tree-icon">
+              {item.isFolder ? '📁' : '📄'}
+            </span>
+            <span className={`tree-name ${item.isFolder ? 'folder' : 'file'}`}>
+              {item.name}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // ✅ GENERATE UNIQUE CONVERSATION ID
   const generateConversationId = () => {
     return 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -77,7 +150,6 @@ const InterviewSystem = () => {
 
     console.log('🎯 BUTTON CLICKED! Topic:', topicId);
     console.log('Engineer Alias:', engineerAlias);
-    console.log('Current interview state:', interviewState);
     
     try {
       setLoading(true);
@@ -97,16 +169,14 @@ const InterviewSystem = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: '', // ✅ EMPTY FOR FIRST REQUEST
+          message: '',
           interviewMode: true,
           questionIndex: 0,
-          conversationId: newConversationId, // ✅ ADD CONVERSATION ID
-          engineerId: engineerAlias.trim()   // ✅ ADD ENGINEER ALIAS
+          conversationId: newConversationId,
+          engineerId: engineerAlias.trim()
         })
       });
 
-      console.log('Response status:', response.status);
-      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -114,21 +184,15 @@ const InterviewSystem = () => {
       const data = await response.json();
       console.log('Full response data:', data);
 
-      // Extract response from your Lambda format
       let aiResponse;
       if (data.statusCode === 200) {
         const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
         aiResponse = responseBody.response;
-        
-        // ✅ STORE CURRENT QUESTION FOR NEXT REQUEST
         setCurrentQuestion(responseBody.currentQuestion || aiResponse);
       } else {
         aiResponse = 'Error starting interview. Please try again.';
       }
 
-      console.log('Extracted AI response:', aiResponse);
-
-      // Clear previous messages and add the first question
       setMessages([{
         id: 1,
         text: aiResponse,
@@ -136,7 +200,6 @@ const InterviewSystem = () => {
         timestamp: new Date().toLocaleTimeString()
       }]);
 
-      // IMPORTANT: Update all the states to switch to interview mode
       setCurrentTopic(topicId);
       setInterviewState('active');
       setInterviewActive(true);
@@ -158,7 +221,6 @@ const InterviewSystem = () => {
     try {
       setLoading(true);
       
-      // Add user message immediately
       const userMessage = {
         id: Date.now(),
         text: inputText,
@@ -170,10 +232,6 @@ const InterviewSystem = () => {
       const currentInput = inputText;
       setInputText('');
 
-      console.log('Sending response:', currentInput);
-      console.log('Current question index:', currentQuestionIndex);
-      console.log('Previous question:', currentQuestion);
-
       const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
         headers: {
@@ -182,14 +240,12 @@ const InterviewSystem = () => {
         body: JSON.stringify({
           message: currentInput,
           interviewMode: true,
-          questionIndex: currentQuestionIndex,        // ✅ PROPER QUESTION INDEX
-          conversationId: conversationId,            // ✅ CONVERSATION ID
-          previousQuestion: currentQuestion,         // ✅ PREVIOUS QUESTION
-          engineerId: engineerAlias.trim()          // ✅ ENGINEER ALIAS
+          questionIndex: currentQuestionIndex,
+          conversationId: conversationId,
+          previousQuestion: currentQuestion,
+          engineerId: engineerAlias.trim()
         })
       });
-
-      console.log('Response status:', response.status);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -198,48 +254,32 @@ const InterviewSystem = () => {
       const data = await response.json();
       console.log('Full response data:', data);
 
-      // Extract response from your Lambda format
       let aiResponse;
       let isInterviewComplete = false;
       
       if (data.statusCode === 200) {
         const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
         aiResponse = responseBody.response;
-        
-        // Check for interview completion
         isInterviewComplete = responseBody.interviewComplete === true;
         
-        console.log('Interview complete status:', isInterviewComplete);
-        console.log('AI Response length:', aiResponse?.length);
-        
-        // ✅ UPDATE QUESTION TRACKING
         setCurrentQuestionIndex(responseBody.questionIndex || currentQuestionIndex + 1);
         setCurrentQuestion(responseBody.currentQuestion || aiResponse);
-        
       } else {
         aiResponse = 'Sorry, there was an error processing your response. Please try again.';
       }
 
-      console.log('Extracted AI response:', aiResponse);
-      console.log('Is interview complete?', isInterviewComplete);
-
-      // ✅ ADD AI RESPONSE WITH PROPER STRUCTURE FLAG
       const aiMessage = {
         id: Date.now() + 1,
         text: aiResponse,
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString(),
-        isStructure: isInterviewComplete // ✅ MARK AS STRUCTURE IF COMPLETE
+        isStructure: isInterviewComplete
       };
       
       setMessages(prev => [...prev, aiMessage]);
 
-      // ✅ HANDLE INTERVIEW COMPLETION
       if (isInterviewComplete) {
         console.log('🎉 Interview completed! Switching to feedback state...');
-        console.log('Structure message added:', aiMessage);
-        
-        // Small delay to ensure state updates
         setTimeout(() => {
           setInterviewComplete(true);
           setInterviewActive(false);
@@ -260,7 +300,57 @@ const InterviewSystem = () => {
     }
   };
 
-  const generateFileStructure = async () => {
+  // ✅ NEW FEEDBACK CHAT FUNCTIONS
+  const startFeedbackChat = () => {
+    setShowFeedbackInput(true);
+    setFeedbackMessages([{
+      id: Date.now(),
+      text: "I'd love to hear your thoughts on the structure! What specific changes would you like to see? Please be as detailed as possible.",
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString()
+    }]);
+  };
+
+  const sendFeedbackMessage = async () => {
+    if (!feedbackInputText.trim()) return;
+
+    try {
+      setFeedbackLoading(true);
+      
+      const userMessage = {
+        id: Date.now(),
+        text: feedbackInputText,
+        sender: 'user',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      
+      setFeedbackMessages(prev => [...prev, userMessage]);
+      const currentInput = feedbackInputText;
+      setFeedbackInputText('');
+
+      // Simulate AI processing feedback
+      setTimeout(async () => {
+        const aiResponse = {
+          id: Date.now() + 1,
+          text: `Thank you for that feedback! I understand you'd like: "${currentInput}"\n\nLet me regenerate the structure with your suggestions. This will take a moment...`,
+          sender: 'ai',
+          timestamp: new Date().toLocaleTimeString()
+        };
+        
+        setFeedbackMessages(prev => [...prev, aiResponse]);
+        
+        // Generate improved structure
+        await generateImprovedStructure(currentInput);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const generateImprovedStructure = async (feedbackText) => {
     try {
       const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
@@ -269,7 +359,7 @@ const InterviewSystem = () => {
           'Accept': 'application/json'
         },
         body: JSON.stringify({ 
-          inputText: 'GENERATE_FILE_STRUCTURE',
+          message: `Please regenerate the folder structure based on this feedback: ${feedbackText}`,
           interviewMode: true,
           topic: currentTopic,
           engineerId: engineerAlias.trim()
@@ -283,32 +373,45 @@ const InterviewSystem = () => {
       const data = await response.json();
       const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
       
-      const structureMessage = {
-        id: Date.now() + 2,
+      // Update the structure in messages
+      const improvedStructureMessage = {
+        id: Date.now() + 3,
         text: responseBody.response,
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString(),
         isStructure: true
       };
 
-      setMessages(prev => [...prev, structureMessage]);
-      setInterviewState('feedback');
-      
-    } catch (error) {
-      console.error('Error generating structure:', error);
-      const errorMessage = {
-        id: Date.now() + 2,
-        text: '❌ Sorry, there was an error generating the file structure.',
+      setMessages(prev => {
+        // Replace the last structure message with the new one
+        const filtered = prev.filter(msg => !msg.isStructure);
+        return [...filtered, improvedStructureMessage];
+      });
+
+      // Add confirmation to feedback chat
+      const confirmationMessage = {
+        id: Date.now() + 4,
+        text: "✅ Perfect! I've updated the structure based on your feedback. You can see the new version above. What do you think of the changes?",
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString()
       };
-      setMessages(prev => [...prev, errorMessage]);
+      
+      setFeedbackMessages(prev => [...prev, confirmationMessage]);
+      
+    } catch (error) {
+      console.error('Error generating improved structure:', error);
+      const errorMessage = {
+        id: Date.now() + 3,
+        text: '❌ Sorry, there was an error generating the improved structure. Please try again.',
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString()
+      };
+      setFeedbackMessages(prev => [...prev, errorMessage]);
     }
   };
 
   const provideFeedback = (type) => {
     if (type === 'approve') {
-      // Save approval
       saveFeedback('APPROVED', 'Structure approved by engineer');
       setStructureApproved(true);
       
@@ -321,79 +424,7 @@ const InterviewSystem = () => {
       
       setMessages(prev => [...prev, approvalMessage]);
     } else {
-      setShowFeedbackInput(true);
-    }
-  };
-
-  const submitFeedback = async () => {
-    if (!feedbackText.trim()) return;
-    
-    // Save feedback and regenerate structure
-    await saveFeedback('MODIFICATION_REQUEST', feedbackText);
-    
-    const feedbackMessage = {
-      id: Date.now(),
-      text: `📝 **Feedback received:** "${feedbackText}"\n\n🔄 Let me regenerate the structure based on your suggestions...`,
-      sender: 'ai',
-      timestamp: new Date().toLocaleTimeString()
-    };
-    
-    setMessages(prev => [...prev, feedbackMessage]);
-    
-    // Regenerate structure with feedback
-    setLoading(true);
-    setTimeout(() => {
-      generateImprovedStructure();
-    }, 2000);
-    
-    setFeedbackText('');
-    setShowFeedbackInput(false);
-  };
-
-  const generateImprovedStructure = async () => {
-    try {
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          inputText: 'REGENERATE_STRUCTURE_WITH_FEEDBACK',
-          interviewMode: true,
-          topic: currentTopic,
-          engineerId: engineerAlias.trim()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
-      
-      const improvedStructureMessage = {
-        id: Date.now() + 3,
-        text: `🔄 **Improved Structure Based on Your Feedback:**\n\n${responseBody.response}`,
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString(),
-        isStructure: true
-      };
-
-      setMessages(prev => [...prev, improvedStructureMessage]);
-      
-    } catch (error) {
-      console.error('Error generating improved structure:', error);
-      const errorMessage = {
-        id: Date.now() + 3,
-        text: '❌ Sorry, there was an error generating the improved structure.',
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
+      startFeedbackChat();
     }
   };
 
@@ -421,6 +452,13 @@ const InterviewSystem = () => {
     }
   };
 
+  const handleFeedbackKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendFeedbackMessage();
+    }
+  };
+
   const resetInterview = () => {
     setInterviewState('start');
     setMessages([]);
@@ -429,11 +467,11 @@ const InterviewSystem = () => {
     setShowFeedbackInput(false);
     setFeedbackText('');
     setStructureApproved(false);
-    // ✅ RESET NEW STATES
+    setFeedbackMessages([]);
+    setFeedbackInputText('');
     setConversationId('');
     setCurrentQuestionIndex(0);
     setCurrentQuestion('');
-    // Don't reset engineerAlias - keep it for next interview
   };
 
   if (interviewState === 'start') {
@@ -449,7 +487,6 @@ const InterviewSystem = () => {
           </div>
         </div>
 
-        {/* ✅ ENGINEER ALIAS INPUT SECTION */}
         <div className="engineer-info-section">
           <h3>👤 Engineer Information</h3>
           <div className="alias-input-container">
@@ -579,10 +616,7 @@ const InterviewSystem = () => {
   }
 
   if (interviewState === 'feedback') {
-    // ✅ DEBUG LOGGING
     const structureMessages = messages.filter(msg => msg.isStructure);
-    console.log('🔍 DEBUG - All messages:', messages);
-    console.log('🔍 DEBUG - Structure messages found:', structureMessages);
     
     return (
       <div className="interview-feedback">
@@ -591,23 +625,25 @@ const InterviewSystem = () => {
           <p>Based on your responses, here's the recommended organization</p>
         </div>
 
-        {/* ✅ IMPROVED STRUCTURE DISPLAY WITH FALLBACK */}
+        {/* ✅ BEAUTIFUL TREE STRUCTURE DISPLAY */}
         <div className="structure-display">
           {structureMessages.length > 0 ? (
             structureMessages.map(msg => (
               <div key={msg.id} className="structure-content">
-                <pre style={{whiteSpace: 'pre-wrap', fontFamily: 'inherit'}}>
-                  {msg.text}
-                </pre>
+                <div className="structure-header">
+                  <h4>📋 Recommended Folder Structure</h4>
+                </div>
+                <TreeStructure structureText={msg.text} />
               </div>
             ))
           ) : (
-            // ✅ FALLBACK: SHOW LAST AI MESSAGE IF NO STRUCTURE FOUND
             <div className="structure-content">
-              <h4>📋 Generated Structure:</h4>
-              <pre style={{whiteSpace: 'pre-wrap', fontFamily: 'inherit'}}>
-                {messages.filter(msg => msg.sender === 'ai').pop()?.text || 'No structure generated yet.'}
-              </pre>
+              <div className="structure-header">
+                <h4>📋 Generated Structure:</h4>
+              </div>
+              <TreeStructure 
+                structureText={messages.filter(msg => msg.sender === 'ai').pop()?.text || 'No structure generated yet.'} 
+              />
             </div>
           )}
         </div>
@@ -634,31 +670,70 @@ const InterviewSystem = () => {
           </div>
         )}
 
+        {/* ✅ FEEDBACK CHAT INTERFACE */}
         {showFeedbackInput && (
-          <div className="feedback-input-section">
-            <h4>💭 What changes would you like?</h4>
-            <p>Be specific about what should be different:</p>
-            <textarea
-              placeholder="Example: 'Move safety procedures to top level', 'Add separate folder for commissioning docs', 'Rename Equipment to Hardware'..."
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              rows="4"
-              className="feedback-textarea"
-            />
-            <div className="feedback-actions">
+          <div className="feedback-chat-section">
+            <div className="feedback-chat-header">
+              <h4>💬 Feedback Discussion</h4>
               <button 
-                onClick={submitFeedback} 
-                className="submit-feedback-btn"
-                disabled={!feedbackText.trim() || loading}
+                onClick={() => {
+                  setShowFeedbackInput(false);
+                  setFeedbackMessages([]);
+                }}
+                className="close-feedback-btn"
               >
-                {loading ? '⏳ Processing...' : '📤 Submit Feedback & Regenerate'}
+                ❌ Close
               </button>
-              <button 
-                onClick={() => setShowFeedbackInput(false)} 
-                className="cancel-feedback-btn"
-              >
-                ❌ Cancel
-              </button>
+            </div>
+            
+            <div className="feedback-messages">
+              {feedbackMessages.map(msg => (
+                <div key={msg.id} className={`feedback-message ${msg.sender}`}>
+                  <div className="message-content">
+                    <div className="message-text">
+                      {(msg.text || '').split('\n').map((line, i) => (
+                        <div key={i}>{line}</div>
+                      ))}
+                    </div>
+                    <div className="message-time">{msg.timestamp}</div>
+                  </div>
+                </div>
+              ))}
+              
+              {feedbackLoading && (
+                <div className="feedback-message ai loading">
+                  <div className="message-content">
+                    <div className="typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <div className="typing-text">AI is processing your feedback...</div>
+                  </div>
+                </div>
+              )}
+              
+              <div ref={feedbackMessagesEndRef} />
+            </div>
+
+            <div className="feedback-input">
+              <div className="input-container">
+                <textarea
+                  value={feedbackInputText}
+                  onChange={(e) => setFeedbackInputText(e.target.value)}
+                  onKeyPress={handleFeedbackKeyPress}
+                  placeholder="Describe the changes you'd like to see in detail..."
+                  rows="3"
+                  disabled={feedbackLoading}
+                />
+                <button 
+                  onClick={sendFeedbackMessage}
+                  disabled={!feedbackInputText.trim() || feedbackLoading}
+                  className="send-feedback-btn"
+                >
+                  {feedbackLoading ? '⏳' : '📤'} Send
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -726,7 +801,6 @@ const InterviewSystem = () => {
           </div>
         )}
         
-        {/* ✅ INVISIBLE ELEMENT TO SCROLL TO */}
         <div ref={messagesEndRef} />
       </div>
 
