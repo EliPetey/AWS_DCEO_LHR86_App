@@ -995,98 +995,97 @@ const InterviewSystem = () => {
           </div>
         </div>
 
-        {/* ✅ FEEDBACK BUTTONS */}
-        {!finalVersionConfirmed && !showFeedbackInput && (
-          <div className="structure-feedback">
-            <h3>📝 What do you think of this structure?</h3>
-            <p>You can provide general guidelines or specific vendor/section changes</p>
-            
-            <div className="feedback-buttons">
-              <button 
-                onClick={() => confirmFinalVersion()} 
-                className="confirm-final-btn"
-              >
-                ✅ Confirm Final Version
-              </button>
-              <button 
-                onClick={() => provideFeedback('modify')} 
-                className="modify-btn"
-              >
-                🔄 Provide Guidelines & Feedback
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ✅ FEEDBACK CHAT INTERFACE */}
-        {showFeedbackInput && !finalVersionConfirmed && (
-          <div className="feedback-chat-section">
-            <div className="feedback-chat-header">
-              <h4>💬 Structure Refinement Discussion</h4>
-              <button 
-                onClick={() => {
-                  setShowFeedbackInput(false);
-                  setFeedbackMessages([]);
-                }}
-                className="close-feedback-btn"
-              >
-                ❌ Close
-              </button>
-            </div>
-            
-            <div className="feedback-messages">
-              {feedbackMessages.map(msg => (
-                <div key={msg.id} className={`feedback-message ${msg.sender}`}>
-                  <div className="message-content">
-                    <div className="message-text">
-                      {(msg.text || '').split('\n').map((line, i) => (
-                        <div key={i}>{line}</div>
-                      ))}
-                    </div>
-                    <div className="message-time">{msg.timestamp}</div>
-                  </div>
-                </div>
-              ))}
-              
-              {feedbackLoading && (
-                <div className="feedback-message ai loading">
-                  <div className="message-content">
-                    <div className="typing-indicator">
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                    <div className="typing-text">AI is creating improved structure...</div>
-                  </div>
-                </div>
-              )}
-              
-              <div ref={feedbackMessagesEndRef} />
-            </div>
-
-            <div className="feedback-input">
-              <div className="input-container">
-                <textarea
-                  ref={feedbackInputRef}
-                  value={feedbackInputText}
-                  onChange={(e) => setFeedbackInputText(e.target.value)}
-                  onKeyPress={handleFeedbackKeyPress}
-                  placeholder="Provide guidelines (e.g., 'Organize by Mechanical/Electrical') or specific changes (e.g., 'For ABB vendor, add Commissioning folder')..."
-                  rows="3"
-                  disabled={feedbackLoading}
-                />
+        {/* ✅ SIDE-BY-SIDE FEEDBACK SECTION */}
+        {!finalVersionConfirmed && (
+          <div className="feedback-section-container">
+            {/* Left Side - Action Buttons */}
+            <div className="feedback-actions-panel">
+              <h3>📝 Structure Actions</h3>
+              <div className="action-buttons">
                 <button 
-                  onClick={sendFeedbackMessage}
-                  disabled={!feedbackInputText.trim() || feedbackLoading}
-                  className="send-feedback-btn"
+                  onClick={() => confirmFinalVersion()} 
+                  className="confirm-final-btn"
                 >
-                  {feedbackLoading ? '⏳' : '📤'} Send Guidelines
+                  ✅ Confirm Final Version
+                </button>
+                <button 
+                  onClick={() => setShowFeedbackInput(!showFeedbackInput)} 
+                  className={showFeedbackInput ? "close-feedback-btn-alt" : "modify-btn"}
+                >
+                  {showFeedbackInput ? "❌ Close Chat" : "🔄 Refine Structure"}
                 </button>
               </div>
-              <div className="feedback-help">
-                💡 You can provide general organization principles or specific vendor/section requirements
+              
+              <div className="feedback-status">
+                {showFeedbackInput ? (
+                  <p className="status-active">💬 Chat active - refining structure</p>
+                ) : (
+                  <p className="status-ready">✅ Ready for confirmation</p>
+                )}
+              </div>
+              
+              {/* Version Info */}
+              <div className="current-version-info">
+                <h4>📊 Current Version</h4>
+                <p>Version {currentVersionIndex}</p>
+                <p>{structureVersions[currentVersionIndex - 1]?.description || 'Initial structure'}</p>
               </div>
             </div>
+            
+            {/* Right Side - Feedback Chat (if active) */}
+            {showFeedbackInput && (
+              <div className="feedback-chat-panel">
+                <h3>💬 Structure Refinement</h3>
+                <div className="feedback-messages-compact">
+                  {feedbackMessages.map(msg => (
+                    <div key={msg.id} className={`feedback-message ${msg.sender}`}>
+                      <div className="message-content">
+                        <div className="message-text">
+                          {(msg.text || '').split('\n').map((line, i) => (
+                            <div key={i}>{line}</div>
+                          ))}
+                        </div>
+                        <div className="message-time">{msg.timestamp}</div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {feedbackLoading && (
+                    <div className="feedback-message ai loading">
+                      <div className="message-content">
+                        <div className="typing-indicator">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </div>
+                        <div className="typing-text">Creating improved structure...</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div ref={feedbackMessagesEndRef} />
+                </div>
+
+                <div className="feedback-input-compact">
+                  <textarea
+                    ref={feedbackInputRef}
+                    value={feedbackInputText}
+                    onChange={(e) => setFeedbackInputText(e.target.value)}
+                    onKeyPress={handleFeedbackKeyPress}
+                    placeholder="Provide guidelines or specific changes..."
+                    rows="2"
+                    disabled={feedbackLoading}
+                  />
+                  <button 
+                    onClick={sendFeedbackMessage}
+                    disabled={!feedbackInputText.trim() || feedbackLoading}
+                    className="send-feedback-btn-compact"
+                  >
+                    {feedbackLoading ? '⏳' : '📤'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
