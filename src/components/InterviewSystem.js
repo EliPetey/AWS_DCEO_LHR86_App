@@ -140,93 +140,112 @@ const InterviewSystem = () => {
   };
 
   const sendResponse = async () => {
-    if (!inputText.trim()) return;
+  if (!inputText.trim()) return;
 
-    try {
-      setLoading(true);
-      
-      // Add user message immediately
-      const userMessage = {
-        id: Date.now(),
-        text: inputText,
-        sender: 'user',
-        timestamp: new Date().toLocaleTimeString()
-      };
-      
-      setMessages(prev => [...prev, userMessage]);
-      const currentInput = inputText;
-      setInputText('');
+  try {
+    setLoading(true);
+    
+    // Add user message immediately
+    const userMessage = {
+      id: Date.now(),
+      text: inputText,
+      sender: 'user',
+      timestamp: new Date().toLocaleTimeString()
+    };
+    
+    setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputText;
+    setInputText('');
 
-      console.log('Sending response:', currentInput);
-      console.log('Current question index:', currentQuestionIndex);
-      console.log('Previous question:', currentQuestion);
+    console.log('Sending response:', currentInput);
+    console.log('Current question index:', currentQuestionIndex);
+    console.log('Previous question:', currentQuestion);
 
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: currentInput,
-          interviewMode: true,
-          questionIndex: currentQuestionIndex,        // ✅ PROPER QUESTION INDEX
-          conversationId: conversationId,            // ✅ CONVERSATION ID
-          previousQuestion: currentQuestion,         // ✅ PREVIOUS QUESTION
-          engineerId: engineerAlias.trim()          // ✅ ENGINEER ALIAS
-        })
-      });
+    const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: currentInput,
+        interviewMode: true,
+        questionIndex: currentQuestionIndex,
+        conversationId: conversationId,
+        previousQuestion: currentQuestion,
+        engineerId: engineerAlias.trim()
+      })
+    });
 
-      console.log('Response status:', response.status);
+    console.log('Response status:', response.status);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log('Full response data:', data);
-
-      // Extract response from your Lambda format
-      let aiResponse;
-      if (data.statusCode === 200) {
-        const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
-        aiResponse = responseBody.response;
-        
-        // ✅ UPDATE QUESTION TRACKING
-        setCurrentQuestionIndex(responseBody.questionIndex || currentQuestionIndex + 1);
-        setCurrentQuestion(responseBody.currentQuestion || aiResponse);
-        
-        // Check if interview is complete
-        if (responseBody.interviewComplete) {
-          setInterviewComplete(true);
-          setInterviewActive(false);
-          setInterviewState('feedback');
-        }
-      } else {
-        aiResponse = 'Sorry, there was an error processing your response. Please try again.';
-      }
-
-      console.log('Extracted AI response:', aiResponse);
-
-      // Add AI response
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        text: aiResponse,
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString()
-      }]);
-
-    } catch (error) {
-      console.error('Error sending response:', error);
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        text: 'Sorry, there was an error processing your response. Please try again.',
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString()
-      }]);
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+    console.log('Full response data:', data);
+
+    // Extract response from your Lambda format
+    let aiResponse;
+    let isInterviewComplete = false;
+    
+    if (data.statusCode === 200) {
+      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+      aiResponse = responseBody.response;
+      
+      // Check for interview completion
+      isInterviewComplete = responseBody.interviewComplete === true;
+      
+      console.log('Interview complete status:', isInterviewComplete);
+      console.log('AI Response length:', aiResponse?.length);
+      
+      // Update question tracking
+      setCurrentQuestionIndex(responseBody.questionIndex || currentQuestionIndex + 1);
+      setCurrentQuestion(responseBody.currentQuestion || aiResponse);
+      
+    } else {
+      aiResponse = 'Sorry, there was an error processing your response. Please try again.';
+    }
+
+    console.log('Extracted AI response:', aiResponse);
+    console.log('Is interview complete?', isInterviewComplete);
+
+    // ✅ ADD AI RESPONSE WITH PROPER STRUCTURE FLAG
+    const aiMessage = {
+      id: Date.now() + 1,
+      text: aiResponse,
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString(),
+      isStructure: isInterviewComplete // ✅ MARK AS STRUCTURE IF COMPLETE
+    };
+    
+    setMessages(prev => [...prev, aiMessage]);
+
+    // ✅ HANDLE INTERVIEW COMPLETION
+    if (isInterviewComplete) {
+      console.log('🎉 Interview completed! Switching to feedback state...');
+      console.log('Structure message added:', aiMessage);
+      
+      // Small delay to ensure state updates
+      setTimeout(() => {
+        setInterviewComplete(true);
+        setInterviewActive(false);
+        setInterviewState('feedback');
+      }, 100);
+    }
+
+  } catch (error) {
+    console.error('Error sending response:', error);
+    setMessages(prev => [...prev, {
+      id: Date.now() + 1,
+      text: 'Sorry, there was an error processing your response. Please try again.',
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString()
+    }]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const generateFileStructure = async () => {
     try {
