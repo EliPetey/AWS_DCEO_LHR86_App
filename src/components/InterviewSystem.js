@@ -676,35 +676,51 @@ const InterviewSystem = () => {
   };
 
   // ✅ CONFIRM FINAL VERSION
-  const confirmFinalVersion = async () => {
-    try {
-      setFinalVersionConfirmed(true);
-      
-      // Update the current version as confirmed
-      setStructureVersions(prev => 
-        prev.map((version, index) => 
-          index === currentVersionIndex - 1 
-            ? { ...version, confirmed: true }
-            : version
-        )
-      );
-
-      // Save to backend
-      await saveFeedback('FINAL_STRUCTURE_CONFIRMED', currentStructure);
-      
-      const confirmationMessage = {
-        id: Date.now(),
-        text: '🎉 **Final Structure Confirmed!**\n\nYour approved structure has been saved and will be used for S3 deployment planning.\n\n✅ **Status:** Final version confirmed by engineer\n📊 **Next:** Structure will be reviewed by other engineers\n🚀 **Goal:** Build consensus for S3 deployment\n\n📁 **Structure ID:** ' + conversationId,
-        sender: 'ai',
-        timestamp: new Date().toLocaleTimeString()
-      };
-      
-      setMessages(prev => [...prev, confirmationMessage]);
-      
-    } catch (error) {
-      console.error('Error confirming final version:', error);
-    }
-  };
+  
+const confirmFinalVersion = async () => {
+  try {
+    console.log('🔄 Confirming final structure version...');
+    
+    // Save to backend FIRST
+    await saveFeedback('FINAL_STRUCTURE_CONFIRMED', currentStructure);
+    
+    // Only update UI state if save was successful
+    setFinalVersionConfirmed(true);
+    
+    // Update the current version as confirmed
+    setStructureVersions(prev => 
+      prev.map((version, index) => 
+        index === currentVersionIndex - 1 
+          ? { ...version, confirmed: true }
+          : version
+      )
+    );
+    
+    console.log('✅ Final structure confirmed and saved!');
+    
+    const confirmationMessage = {
+      id: Date.now(),
+      text: '🎉 **Final Structure Confirmed!**\n\nYour approved structure has been saved to the database and will be used for S3 deployment planning.\n\n✅ **Status:** Final version confirmed and saved\n📊 **Next:** Structure will be reviewed by other engineers\n🚀 **Goal:** Build consensus for S3 deployment\n\n📁 **Structure ID:** ' + conversationId,
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString()
+    };
+    
+    setMessages(prev => [...prev, confirmationMessage]);
+    
+  } catch (error) {
+    console.error('❌ Error confirming final version:', error);
+    
+    // Show error message to user
+    const errorMessage = {
+      id: Date.now(),
+      text: '❌ **Error Saving Structure**\n\nThere was an error saving your confirmed structure to the database. Please try again or contact support.\n\nError: ' + error.message,
+      sender: 'ai',
+      timestamp: new Date().toLocaleTimeString()
+    };
+    
+    setMessages(prev => [...prev, errorMessage]);
+  }
+};
 
   const provideFeedback = (type) => {
     if (type === 'approve') {
@@ -715,21 +731,38 @@ const InterviewSystem = () => {
   };
 
   const saveFeedback = async (type, feedback) => {
-    try {
-      await fetch(`${API_BASE_URL}/questions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          inputText: `FEEDBACK:${type}:${feedback}`,
-          interviewMode: true,
-          topic: currentTopic,
-          engineerId: engineerAlias.trim()
-        })
-      });
-    } catch (error) {
-      console.error('Error saving feedback:', error);
+  try {
+    console.log('🔄 Saving feedback to backend:', type);
+    
+    const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ 
+        message: `FEEDBACK:${type}:${feedback}`,
+        interviewMode: true,
+        topic: currentTopic,
+        engineerId: engineerAlias.trim(),
+        conversationId: conversationId,
+        saveFinalStructure: true // ✅ ADD FLAG FOR FINAL STRUCTURE
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+
+    const data = await response.json();
+    console.log('✅ Feedback saved successfully:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('❌ Error saving feedback:', error);
+    throw error; // Re-throw so confirmFinalVersion can handle it
+  }
+};
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
