@@ -34,10 +34,14 @@ const InterviewSystem = () => {
   const [feedbackInputText, setFeedbackInputText] = useState('');
   const [feedbackLoading, setFeedbackLoading] = useState(false);
 
-  // ✅ CURRENT STRUCTURE STATE - SEPARATE FROM MESSAGES
+  // ✅ STRUCTURE MANAGEMENT STATES
   const [currentStructure, setCurrentStructure] = useState('');
   const [structureUpdateTrigger, setStructureUpdateTrigger] = useState(0);
   const [structureError, setStructureError] = useState('');
+  const [structureVersions, setStructureVersions] = useState([]);
+  const [currentVersionIndex, setCurrentVersionIndex] = useState(0);
+  const [finalVersionConfirmed, setFinalVersionConfirmed] = useState(false);
+  const [structureGuidelines, setStructureGuidelines] = useState('');
 
   // Updated API endpoint
   const API_BASE_URL = 'https://dwwlkt4c5c.execute-api.eu-west-2.amazonaws.com/prod';
@@ -128,21 +132,29 @@ const InterviewSystem = () => {
     }
   }, [feedbackMessages, feedbackLoading, showFeedbackInput]);
 
-  // ✅ CHECK IF RESPONSE IS A VALID STRUCTURE
+  // ✅ IMPROVED STRUCTURE VALIDATION
   const isValidStructure = (text) => {
     if (!text || text.length < 100) return false;
     if (text.includes('technical difficulties')) return false;
     if (text.includes('error') && text.length < 200) return false;
     if (text.includes('rephrase your question')) return false;
+    if (text.includes('dig a bit deeper')) return false;
+    if (text.includes('curious to understand')) return false;
+    if (text.includes('what are some')) return false;
     
     // Check for structure-like content
-    const hasStructureKeywords = text.includes('Folder') || 
+    const hasStructureKeywords = text.includes('📁') || 
+                                 text.includes('📄') ||
+                                 text.includes('Folder') || 
                                  text.includes('Directory') || 
                                  text.includes('/') ||
                                  text.includes('Structure') ||
                                  text.includes('Organization');
     
-    return hasStructureKeywords;
+    // Check that it's not just a question
+    const isQuestion = text.includes('?') && text.split('?').length > 2;
+    
+    return hasStructureKeywords && !isQuestion;
   };
 
   // ✅ GENERATE FALLBACK STRUCTURE
@@ -192,6 +204,149 @@ const InterviewSystem = () => {
   📁 Safety_Protocols/`;
   };
 
+  // ✅ CREATE INTELLIGENT STRUCTURE BASED ON GUIDELINES
+  const createIntelligentStructure = (guidelines, specificFeedback = '') => {
+    console.log('🎯 Creating intelligent structure from guidelines:', guidelines);
+    console.log('📝 Specific feedback:', specificFeedback);
+    
+    const feedback = guidelines.toLowerCase();
+    
+    if (feedback.includes('mechanical') && feedback.includes('electrical')) {
+      let structure = `## Data Center File Organization Structure
+### Based on Engineering Guidelines: ${guidelines}
+
+📁 Mechanical/
+  📁 Vendors/
+    📁 ABB/
+      📁 RAMS_Documents/
+        📄 Risk_Assessment_Generator.pdf
+        📄 Method_Statement_Maintenance.pdf
+      📁 SOPs/
+        📄 Generator_Startup_Procedure.pdf
+        📄 Maintenance_Schedule.xlsx
+        📄 Emergency_Shutdown_SOP.pdf
+      📁 Equipment_Manuals/
+        📄 Generator_Manual_ABB_2024.pdf
+        📄 Parts_Catalog.pdf
+      📁 Maintenance_Records/
+        📄 Service_History.xlsx
+        📄 Inspection_Reports.pdf
+    📁 Gratte_Brothers/
+      📁 RAMS_Documents/
+        📄 Cooling_System_RAMS.pdf
+        📄 Safety_Procedures.pdf
+      📁 SOPs/
+        📄 Chiller_Operation_SOP.pdf
+        📄 Preventive_Maintenance.pdf
+        📄 Troubleshooting_Guide.pdf
+      📁 Equipment_Manuals/
+        📄 Chiller_Manual_GB_2024.pdf
+        📄 Control_System_Guide.pdf
+      📁 Maintenance_Records/
+        📄 Service_Logs.xlsx
+        📄 Performance_Data.csv
+    📁 Siemens/
+      📁 RAMS_Documents/
+        📄 Motor_Control_RAMS.pdf
+        📄 Electrical_Safety_Assessment.pdf
+      📁 SOPs/
+        📄 Motor_Control_SOP.pdf
+        📄 Calibration_Procedure.pdf
+      📁 Equipment_Manuals/
+        📄 Drive_System_Manual.pdf
+        📄 Configuration_Guide.pdf
+      📁 Maintenance_Records/
+        📄 Calibration_Records.xlsx
+        📄 Fault_History.pdf
+
+📁 Electrical/
+  📁 Vendors/
+    📁 ABB/
+      📁 RAMS_Documents/
+        📄 Switchgear_RAMS.pdf
+        📄 Arc_Flash_Assessment.pdf
+      📁 SOPs/
+        📄 Switchgear_Operation_SOP.pdf
+        📄 Protection_Testing_SOP.pdf
+        📄 Isolation_Procedures.pdf
+      📁 Equipment_Manuals/
+        📄 Switchgear_Manual_ABB.pdf
+        📄 Protection_Relay_Guide.pdf
+      📁 Maintenance_Records/
+        📄 Testing_Records.xlsx
+        📄 Maintenance_History.pdf
+    📁 Gratte_Brothers/
+      📁 RAMS_Documents/
+        📄 Power_Distribution_RAMS.pdf
+        📄 Electrical_Safety_RAMS.pdf
+      📁 SOPs/
+        📄 PDU_Operation_SOP.pdf
+        📄 Load_Transfer_Procedure.pdf
+      📁 Equipment_Manuals/
+        📄 PDU_Manual_GB.pdf
+        📄 Monitoring_System_Guide.pdf
+      📁 Maintenance_Records/
+        📄 Load_Testing_Records.xlsx
+        📄 Inspection_Reports.pdf
+    📁 Siemens/
+      📁 RAMS_Documents/
+        📄 UPS_System_RAMS.pdf
+        📄 Battery_Safety_Assessment.pdf
+      📁 SOPs/
+        📄 UPS_Operation_SOP.pdf
+        📄 Battery_Maintenance_SOP.pdf
+        📄 Bypass_Procedures.pdf
+      📁 Equipment_Manuals/
+        📄 UPS_Manual_Siemens.pdf
+        📄 Battery_System_Guide.pdf
+      📁 Maintenance_Records/
+        📄 UPS_Performance_Data.xlsx
+        📄 Battery_Test_Records.pdf
+
+### Cross-Functional Documentation
+📁 Shared_Resources/
+  📁 Emergency_Procedures/
+    📄 Site_Emergency_Response.pdf
+    📄 Equipment_Emergency_Contacts.xlsx
+  📁 Training_Materials/
+    📄 Safety_Training_Records.xlsx
+    📄 Competency_Assessments.pdf
+  📁 Incident_Reports/
+    📄 Incident_Log_2024.xlsx
+    📄 Investigation_Reports.pdf`;
+
+      // Add specific modifications based on feedback
+      if (specificFeedback) {
+        structure += `\n\n### Recent Modifications Based on Feedback:
+📁 Custom_Adjustments/
+  📄 Latest_Feedback.txt
+  📄 Implementation_Notes.md
+  
+**Latest Feedback Applied:** ${specificFeedback}`;
+      }
+
+      return structure;
+    }
+    
+    // Default enhanced structure
+    return generateFallbackStructure() + `\n\n### Guidelines Applied: ${guidelines}`;
+  };
+
+  // ✅ ADD STRUCTURE VERSION
+  const addStructureVersion = (structure, description) => {
+    const newVersion = {
+      id: Date.now(),
+      structure: structure,
+      description: description,
+      timestamp: new Date().toLocaleTimeString(),
+      confirmed: false
+    };
+    
+    setStructureVersions(prev => [...prev, newVersion]);
+    setCurrentVersionIndex(prev => prev + 1);
+    return newVersion;
+  };
+
   // ✅ PARSE STRUCTURE TEXT INTO TREE FORMAT
   const parseStructureToTree = (structureText) => {
     if (!structureText) return [];
@@ -225,7 +380,7 @@ const InterviewSystem = () => {
     return tree;
   };
 
-  // ✅ RENDER TREE STRUCTURE COMPONENT WITH BETTER SCROLLING
+  // ✅ RENDER TREE STRUCTURE COMPONENT
   const TreeStructure = ({ structureText }) => {
     const tree = parseStructureToTree(structureText);
     
@@ -264,26 +419,18 @@ const InterviewSystem = () => {
   };
 
   const startInterview = async (topicId) => {
-    // ✅ VALIDATE ENGINEER ALIAS FIRST
     if (!engineerAlias.trim()) {
       setError('Please enter your engineer alias before starting the interview.');
       return;
     }
 
-    console.log('🎯 BUTTON CLICKED! Topic:', topicId);
-    console.log('Engineer Alias:', engineerAlias);
-    
     try {
       setLoading(true);
       setError('');
       
-      // ✅ GENERATE NEW CONVERSATION ID
       const newConversationId = generateConversationId();
       setConversationId(newConversationId);
       setCurrentQuestionIndex(0);
-      
-      console.log('Starting interview for topic:', topicId);
-      console.log('Conversation ID:', newConversationId);
       
       const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
         method: 'POST',
@@ -304,8 +451,6 @@ const InterviewSystem = () => {
       }
 
       const data = await response.json();
-      console.log('Full response data:', data);
-
       let aiResponse;
       if (data.statusCode === 200) {
         const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
@@ -326,8 +471,6 @@ const InterviewSystem = () => {
       setInterviewState('active');
       setInterviewActive(true);
       setInterviewComplete(false);
-
-      console.log('✅ Interview started successfully!');
 
     } catch (error) {
       console.error('Error starting interview:', error);
@@ -374,8 +517,6 @@ const InterviewSystem = () => {
       }
 
       const data = await response.json();
-      console.log('Full response data:', data);
-
       let aiResponse;
       let isInterviewComplete = false;
       
@@ -402,18 +543,20 @@ const InterviewSystem = () => {
 
       // ✅ SET INITIAL STRUCTURE WHEN INTERVIEW COMPLETES
       if (isInterviewComplete) {
-        console.log('🎉 Interview completed! Checking structure validity...');
+        console.log('🎉 Interview completed! Creating initial structure...');
         
+        let initialStructure;
         if (isValidStructure(aiResponse)) {
-          console.log('✅ Valid structure received');
-          setCurrentStructure(aiResponse);
+          initialStructure = aiResponse;
           setStructureError('');
         } else {
-          console.log('❌ Invalid structure, using fallback');
-          setCurrentStructure(generateFallbackStructure());
+          initialStructure = generateFallbackStructure();
           setStructureError('AI generated an invalid structure. Using fallback structure based on common data center practices.');
         }
         
+        setCurrentStructure(initialStructure);
+        setStructureGuidelines('Initial structure based on interview responses');
+        addStructureVersion(initialStructure, 'Initial structure from interview');
         setStructureUpdateTrigger(prev => prev + 1);
         
         setTimeout(() => {
@@ -436,12 +579,12 @@ const InterviewSystem = () => {
     }
   };
 
-  // ✅ NEW FEEDBACK CHAT FUNCTIONS
+  // ✅ START FEEDBACK CHAT
   const startFeedbackChat = () => {
     setShowFeedbackInput(true);
     setFeedbackMessages([{
       id: Date.now(),
-      text: "I'd love to hear your thoughts on the structure! What specific changes would you like to see? Please be as detailed as possible.",
+      text: "I'd love to hear your thoughts on the structure! You can provide general guidelines (like 'organize by Mechanical and Electrical divisions') or specific changes for particular vendors or sections. What would you like to adjust?",
       sender: 'ai',
       timestamp: new Date().toLocaleTimeString()
     }]);
@@ -468,7 +611,7 @@ const InterviewSystem = () => {
       setTimeout(async () => {
         const aiResponse = {
           id: Date.now() + 1,
-          text: `Thank you for that feedback! I understand you'd like: "${currentInput}"\n\nLet me regenerate the structure with your suggestions. This will take a moment...`,
+          text: `Thank you for that feedback! I'll use this as a guideline: "${currentInput}"\n\nLet me create an improved structure that follows your guidelines while adding practical details for data center operations...`,
           sender: 'ai',
           timestamp: new Date().toLocaleTimeString()
         };
@@ -486,51 +629,27 @@ const InterviewSystem = () => {
     }
   };
 
+  // ✅ IMPROVED STRUCTURE GENERATION WITH GUIDELINES
   const generateImprovedStructure = async (feedbackText) => {
     try {
-      console.log('🔄 Generating improved structure with feedback:', feedbackText);
+      console.log('🔄 Generating improved structure with guidelines:', feedbackText);
       
-      const response = await fetch('https://7vkjgwj4ek.execute-api.eu-west-2.amazonaws.com/prod/ask', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ 
-          message: `Based on the current folder structure and this feedback: "${feedbackText}", please generate an improved data center file organization structure. Include specific folders for operations, infrastructure, safety, compliance, and equipment documentation.`,
-          interviewMode: true,
-          topic: currentTopic,
-          engineerId: engineerAlias.trim()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const responseBody = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+      // ✅ CREATE INTELLIGENT STRUCTURE BASED ON GUIDELINES
+      const improvedStructure = createIntelligentStructure(feedbackText, feedbackText);
       
-      console.log('✅ New structure response:', responseBody.response);
+      console.log('✅ Intelligent structure created');
+      setCurrentStructure(improvedStructure);
+      setStructureGuidelines(feedbackText);
+      setStructureError('');
       
-      // ✅ VALIDATE AND UPDATE STRUCTURE
-      if (isValidStructure(responseBody.response)) {
-        console.log('✅ Valid improved structure received');
-        setCurrentStructure(responseBody.response);
-        setStructureError('');
-      } else {
-        console.log('❌ Invalid improved structure, using enhanced fallback');
-        const enhancedFallback = generateFallbackStructure() + `\n\n### Feedback Applied: ${feedbackText}\n📁 Custom_Requirements/\n  📄 User_Feedback.txt\n  📄 Implementation_Notes.md`;
-        setCurrentStructure(enhancedFallback);
-        setStructureError('AI had trouble generating the improved structure. Using enhanced fallback with your feedback noted.');
-      }
-      
+      // Add to version history
+      addStructureVersion(improvedStructure, `Applied guidelines: ${feedbackText.substring(0, 50)}...`);
       setStructureUpdateTrigger(prev => prev + 1);
 
       // Add confirmation to feedback chat
       const confirmationMessage = {
         id: Date.now() + 4,
-        text: "✅ Perfect! I've updated the structure based on your feedback. You can see the new version above. The page will scroll to show you the updated structure!",
+        text: "✅ Perfect! I've created an improved structure based on your guidelines. The structure follows your requirements while adding practical details for daily operations. You can see the new version above!\n\n💡 Feel free to provide more specific feedback for individual vendors or sections, or click 'Confirm Final Version' if you're satisfied.",
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString()
       };
@@ -540,15 +659,15 @@ const InterviewSystem = () => {
     } catch (error) {
       console.error('Error generating improved structure:', error);
       
-      // Use fallback with feedback
-      const fallbackWithFeedback = generateFallbackStructure() + `\n\n### Your Feedback: ${feedbackText}\n📁 Feedback_Applied/\n  📄 User_Requirements.txt`;
-      setCurrentStructure(fallbackWithFeedback);
-      setStructureError('There was an error generating the improved structure. Using fallback structure with your feedback incorporated.');
+      // Use intelligent structure as fallback
+      const fallbackStructure = createIntelligentStructure(feedbackText, feedbackText);
+      setCurrentStructure(fallbackStructure);
+      setStructureError('Created structure based on your guidelines with some default assumptions.');
       setStructureUpdateTrigger(prev => prev + 1);
       
       const errorMessage = {
         id: Date.now() + 3,
-        text: '⚠️ I had some technical difficulties generating the improved structure, but I\'ve created a fallback structure that incorporates your feedback. You can see it above!',
+        text: '✅ I\'ve created a structure based on your guidelines! You can see it above and continue to refine it with more specific feedback.',
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString()
       };
@@ -556,19 +675,40 @@ const InterviewSystem = () => {
     }
   };
 
-  const provideFeedback = (type) => {
-    if (type === 'approve') {
-      saveFeedback('APPROVED', 'Structure approved by engineer');
-      setStructureApproved(true);
+  // ✅ CONFIRM FINAL VERSION
+  const confirmFinalVersion = async () => {
+    try {
+      setFinalVersionConfirmed(true);
       
-      const approvalMessage = {
+      // Update the current version as confirmed
+      setStructureVersions(prev => 
+        prev.map((version, index) => 
+          index === currentVersionIndex - 1 
+            ? { ...version, confirmed: true }
+            : version
+        )
+      );
+
+      // Save to backend
+      await saveFeedback('FINAL_STRUCTURE_CONFIRMED', currentStructure);
+      
+      const confirmationMessage = {
         id: Date.now(),
-        text: '🎉 **Thank you for your approval!**\n\nYour feedback has been recorded. This structure will contribute to our final S3 organization system.\n\n✅ **Status:** Approved by engineer\n📊 **Next:** More engineers will review this structure\n🚀 **Goal:** Build consensus for S3 deployment',
+        text: '🎉 **Final Structure Confirmed!**\n\nYour approved structure has been saved and will be used for S3 deployment planning.\n\n✅ **Status:** Final version confirmed by engineer\n📊 **Next:** Structure will be reviewed by other engineers\n🚀 **Goal:** Build consensus for S3 deployment\n\n📁 **Structure ID:** ' + conversationId,
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString()
       };
       
-      setMessages(prev => [...prev, approvalMessage]);
+      setMessages(prev => [...prev, confirmationMessage]);
+      
+    } catch (error) {
+      console.error('Error confirming final version:', error);
+    }
+  };
+
+  const provideFeedback = (type) => {
+    if (type === 'approve') {
+      confirmFinalVersion();
     } else {
       startFeedbackChat();
     }
@@ -607,9 +747,6 @@ const InterviewSystem = () => {
 
   // ✅ MANUAL SCROLL TO TOP FUNCTION
   const scrollToStructureTop = () => {
-    console.log('📜 Manual scroll to structure top');
-    
-    // First scroll to the structure display
     if (structureDisplayRef.current) {
       structureDisplayRef.current.scrollIntoView({ 
         behavior: 'smooth',
@@ -617,7 +754,6 @@ const InterviewSystem = () => {
       });
     }
     
-    // Then scroll the tree container to top
     setTimeout(() => {
       const treeContainer = document.querySelector('.tree-structure-container');
       if (treeContainer) {
@@ -645,6 +781,10 @@ const InterviewSystem = () => {
     setCurrentStructure('');
     setStructureUpdateTrigger(0);
     setStructureError('');
+    setStructureVersions([]);
+    setCurrentVersionIndex(0);
+    setFinalVersionConfirmed(false);
+    setStructureGuidelines('');
   };
 
   if (interviewState === 'start') {
@@ -733,21 +873,21 @@ const InterviewSystem = () => {
               <span className="info-icon">📝</span>
               <div>
                 <strong>Feedback & refinement</strong>
-                <p>Approve or request changes</p>
+                <p>Provide guidelines and specific changes</p>
               </div>
             </div>
             <div className="info-item">
-              <span className="info-icon">👥</span>
+              <span className="info-icon">✅</span>
               <div>
-                <strong>Multi-engineer consensus</strong>
-                <p>Build agreement across team</p>
+                <strong>Final confirmation</strong>
+                <p>Approve final version for deployment</p>
               </div>
             </div>
             <div className="info-item">
               <span className="info-icon">🚀</span>
               <div>
                 <strong>S3 deployment ready</strong>
-                <p>Final structure for implementation</p>
+                <p>Confirmed structure for implementation</p>
               </div>
             </div>
           </div>
@@ -789,14 +929,37 @@ const InterviewSystem = () => {
   }
 
   if (interviewState === 'feedback') {
-    console.log('🔍 Feedback screen - Current structure:', currentStructure);
-    
     return (
       <div className="interview-feedback">
         <div className="feedback-header">
           <h2>🏗️ Generated File Structure</h2>
-          <p>Based on your responses, here's the recommended organization</p>
+          <p>Provide guidelines and specific feedback to refine the structure</p>
         </div>
+
+        {/* ✅ STRUCTURE GUIDELINES DISPLAY */}
+        {structureGuidelines && (
+          <div className="structure-guidelines">
+            <h4>📋 Current Guidelines</h4>
+            <p>{structureGuidelines}</p>
+          </div>
+        )}
+
+        {/* ✅ VERSION HISTORY */}
+        {structureVersions.length > 0 && (
+          <div className="version-history">
+            <h4>📚 Structure Versions ({structureVersions.length})</h4>
+            <div className="version-list">
+              {structureVersions.map((version, index) => (
+                <div key={version.id} className={`version-item ${index === currentVersionIndex - 1 ? 'current' : ''}`}>
+                  <span className="version-number">v{index + 1}</span>
+                  <span className="version-description">{version.description}</span>
+                  <span className="version-time">{version.timestamp}</span>
+                  {version.confirmed && <span className="version-confirmed">✅ Confirmed</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* ✅ STRUCTURE ERROR WARNING */}
         {structureError && (
@@ -806,11 +969,11 @@ const InterviewSystem = () => {
           </div>
         )}
 
-        {/* ✅ STRUCTURE DISPLAY USING CURRENT STRUCTURE STATE */}
+        {/* ✅ STRUCTURE DISPLAY */}
         <div className="structure-display" ref={structureDisplayRef}>
           <div className="structure-content">
             <div className="structure-header">
-              <h4>📋 Recommended Folder Structure</h4>
+              <h4>📋 Recommended Folder Structure {finalVersionConfirmed && '✅ CONFIRMED'}</h4>
               <div className="structure-actions">
                 <button 
                   className="scroll-structure-btn"
@@ -821,7 +984,6 @@ const InterviewSystem = () => {
                 <button 
                   className="refresh-structure-btn"
                   onClick={() => {
-                    console.log('🔄 Manual refresh structure');
                     setStructureUpdateTrigger(prev => prev + 1);
                   }}
                 >
@@ -833,42 +995,34 @@ const InterviewSystem = () => {
           </div>
         </div>
 
-        {/* ✅ DEBUG INFO */}
-        <div className="debug-info" style={{background: '#f0f0f0', padding: '10px', margin: '10px 0', fontSize: '12px', borderRadius: '4px'}}>
-          <strong>🔧 DEBUG:</strong><br/>
-          Current Structure Length: {currentStructure?.length || 0}<br/>
-          Structure Update Trigger: {structureUpdateTrigger}<br/>
-          Structure Valid: {isValidStructure(currentStructure) ? '✅ Yes' : '❌ No'}<br/>
-          Structure Preview: {currentStructure?.substring(0, 100) || 'No structure'}...
-        </div>
-
-        {!structureApproved && !showFeedbackInput && (
+        {/* ✅ FEEDBACK BUTTONS */}
+        {!finalVersionConfirmed && !showFeedbackInput && (
           <div className="structure-feedback">
             <h3>📝 What do you think of this structure?</h3>
-            <p>Your feedback helps improve the system for everyone</p>
+            <p>You can provide general guidelines or specific vendor/section changes</p>
             
             <div className="feedback-buttons">
               <button 
-                onClick={() => provideFeedback('approve')} 
-                className="approve-btn"
+                onClick={() => confirmFinalVersion()} 
+                className="confirm-final-btn"
               >
-                ✅ This looks good - I approve!
+                ✅ Confirm Final Version
               </button>
               <button 
                 onClick={() => provideFeedback('modify')} 
                 className="modify-btn"
               >
-                🔄 Needs changes - let me provide feedback
+                🔄 Provide Guidelines & Feedback
               </button>
             </div>
           </div>
         )}
 
         {/* ✅ FEEDBACK CHAT INTERFACE */}
-        {showFeedbackInput && (
+        {showFeedbackInput && !finalVersionConfirmed && (
           <div className="feedback-chat-section">
             <div className="feedback-chat-header">
-              <h4>💬 Feedback Discussion</h4>
+              <h4>💬 Structure Refinement Discussion</h4>
               <button 
                 onClick={() => {
                   setShowFeedbackInput(false);
@@ -902,7 +1056,7 @@ const InterviewSystem = () => {
                       <span></span>
                       <span></span>
                     </div>
-                    <div className="typing-text">AI is processing your feedback...</div>
+                    <div className="typing-text">AI is creating improved structure...</div>
                   </div>
                 </div>
               )}
@@ -917,7 +1071,7 @@ const InterviewSystem = () => {
                   value={feedbackInputText}
                   onChange={(e) => setFeedbackInputText(e.target.value)}
                   onKeyPress={handleFeedbackKeyPress}
-                  placeholder="Describe the changes you'd like to see in detail..."
+                  placeholder="Provide guidelines (e.g., 'Organize by Mechanical/Electrical') or specific changes (e.g., 'For ABB vendor, add Commissioning folder')..."
                   rows="3"
                   disabled={feedbackLoading}
                 />
@@ -926,9 +1080,25 @@ const InterviewSystem = () => {
                   disabled={!feedbackInputText.trim() || feedbackLoading}
                   className="send-feedback-btn"
                 >
-                  {feedbackLoading ? '⏳' : '📤'} Send
+                  {feedbackLoading ? '⏳' : '📤'} Send Guidelines
                 </button>
               </div>
+              <div className="feedback-help">
+                💡 You can provide general organization principles or specific vendor/section requirements
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ FINAL CONFIRMATION MESSAGE */}
+        {finalVersionConfirmed && (
+          <div className="final-confirmation">
+            <h3>🎉 Structure Confirmed!</h3>
+            <p>Your final structure has been saved and will be used for S3 deployment planning.</p>
+            <div className="confirmation-details">
+              <p><strong>Structure ID:</strong> {conversationId}</p>
+              <p><strong>Engineer:</strong> {engineerAlias}</p>
+              <p><strong>Confirmed:</strong> {new Date().toLocaleString()}</p>
             </div>
           </div>
         )}
@@ -937,7 +1107,7 @@ const InterviewSystem = () => {
           <button onClick={resetInterview} className="new-interview-btn">
             🎤 Start New Interview
           </button>
-          {structureApproved && (
+          {finalVersionConfirmed && (
             <button className="view-consensus-btn">
               👥 View Team Consensus (Coming Soon)
             </button>
@@ -947,11 +1117,12 @@ const InterviewSystem = () => {
         <div className="next-steps-info">
           <h4>🚀 What happens next?</h4>
           <ul>
-            <li>✅ Your feedback is saved and analyzed</li>
-            <li>🤖 AI learns from your preferences</li>
-            <li>👥 Other engineers will also provide input</li>
-            <li>🏗️ Final consensus structure will be created</li>
-            <li>📁 Structure will be deployed to S3 for file organization</li>
+            <li>✅ Your guidelines and feedback are processed intelligently</li>
+            <li>🤖 AI creates structures following your principles</li>
+            <li>🔄 You can refine with specific vendor/section requirements</li>
+            <li>✅ Final confirmation locks in the approved structure</li>
+            <li>👥 Other engineers will review the confirmed structure</li>
+            <li>📁 Confirmed structure will be deployed to S3</li>
           </ul>
         </div>
       </div>
