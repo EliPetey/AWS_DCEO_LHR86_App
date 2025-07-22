@@ -1,71 +1,4 @@
-.amazon-q-container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  background-color: #fff;
-  position: relative;
-}
-
-.amazon-q-iframe {
-  width: 100%;
-  border: none;
-  transition: opacity 0.5s ease;
-}
-
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 400px;
-  background-color: #f8f9fa;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 5;
-}
-
-.loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #ff9900; /* Amazon orange */
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 2s linear infinite;
-  margin-bottom: 16px;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.amazon-q-footer {
-  padding: 8px 16px;
-  background-color: #232f3e; /* Amazon dark blue */
-  color: white;
-  text-align: center;
-  font-size: 14px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .amazon-q-container {
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    max-width: 100%;
-  }
-}
-
-/* .amazon-q-chat {
+.amazon-q-chat {
   max-width: 800px;
   margin: 20px auto;
   border: 1px solid #ddd;
@@ -187,4 +120,4 @@
 .chat-input button:disabled {
   background: #ccc;
   cursor: not-allowed;
-} */
+}
